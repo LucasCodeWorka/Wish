@@ -11,6 +11,12 @@ Painel de vendas, produtos e estoque da Wish Fine Jewelry. O frontend usa Next.j
 
 Para verificar o frontend de produção, execute `npm run build`.
 
+## Prévia pública
+
+O GitHub Pages publica uma exportação estática com dados **inteiramente fictícios**. As quatro abas funcionam como uma foto do painel; o filtro de período fica oculto nessa versão. A prévia não consulta a API nem o SQL Server.
+
+Para gerar a mesma prévia localmente, defina `WISHBI_DEMO_MODE=true` e `WISHBI_STATIC_EXPORT=true` antes de `npm run build`. O resultado fica em `frontend/out`. O workflow `.github/workflows/preview-pages.yml` faz isso em cada push para `main`.
+
 ## Estrutura
 
 - `frontend/app/(dashboard)`: resumo, vendas, produtos e estoque.
@@ -18,7 +24,7 @@ Para verificar o frontend de produção, execute `npm run build`.
 - `backend/src/server.js`: rotas da API.
 - `backend/src/queries.js`: consultas SQL dos relatórios.
 
-## Publicação
+## Publicação com dados reais
 
 O código não contém credenciais. Configure as variáveis de ambiente no serviço de hospedagem e mantenha o acesso ao banco restrito. A API atual consulta dados comerciais reais; antes de expô-la publicamente, implemente autenticação e controle de acesso para o painel e a API.
 

@@ -17,7 +17,9 @@ export default async function VendasPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { periodo, preset } = periodoDaUrl(await searchParams);
+  const { periodo, preset } = periodoDaUrl(
+    process.env.WISHBI_STATIC_EXPORT === "true" ? {} : await searchParams,
+  );
 
   let data: Awaited<ReturnType<typeof getSalesData>> | null = null;
   let error: string | null = null;
@@ -83,7 +85,9 @@ export default async function VendasPage({
         lede="Desempenho comercial do período: faturamento, ticket, peças por atendimento e mix."
         lastSaleDate={kpis.lastSaleDate}
       >
-        <FilterBar periodo={periodo} preset={preset} comparado={anterior.periodo} />
+        {process.env.WISHBI_STATIC_EXPORT !== "true" && (
+          <FilterBar periodo={periodo} preset={preset} comparado={anterior.periodo} />
+        )}
       </PageHeader>
 
       <section className="metricsGrid">

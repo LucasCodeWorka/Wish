@@ -1,3 +1,5 @@
+import { demoResponse } from "./demo";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "http://localhost:4000";
@@ -125,6 +127,10 @@ export type AbcRow = {
 export type HealthInfo = { serverTime: string; databaseName: string };
 
 async function getJson<T>(path: string): Promise<T> {
+  if (process.env.WISHBI_DEMO_MODE === "true") {
+    return demoResponse(path) as T;
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, { cache: "no-store" });
 
   if (!response.ok) {

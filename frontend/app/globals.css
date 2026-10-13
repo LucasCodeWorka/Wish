@@ -39,6 +39,43 @@ body {
   min-height: 100vh;
 }
 
+.demoBanner {
+  padding: 10px 24px;
+  background: #e9dfc8;
+  color: #44351e;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.previewHome {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  gap: 16px;
+  padding: 32px;
+  text-align: center;
+}
+
+.previewHome h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 48px;
+}
+
+.previewHome p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.previewHome a {
+  padding: 12px 20px;
+  border-radius: 8px;
+  background: var(--green);
+  color: white;
+  text-decoration: none;
+}
+
 .sidebar {
   position: sticky;
   top: 0;

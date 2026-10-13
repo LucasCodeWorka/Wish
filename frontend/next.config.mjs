@@ -7,6 +7,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname, ".."),
+  ...(process.env.WISHBI_STATIC_EXPORT === "true"
+    ? { output: "export", basePath: "/Wish", trailingSlash: true }
+    : {}),
 };
 
 export default nextConfig;
