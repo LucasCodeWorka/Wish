@@ -1,0 +1,16 @@
+node_modules/
+.next/
+dist/
+build/
+**/.env*
+!.env.example
+*.log
+__pycache__/
+*.pyc
+*.tsbuildinfo
+.vercel/
+.claude/
+.agents/
+MAPEAMENTO_*.md
+reuniao-*.pptx
+wishbanc.py
