@@ -3,15 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, ChevronLeft, ChevronRight, Gem, LayoutDashboard, LineChart } from "lucide-react";
+import { Boxes, ChevronLeft, ChevronRight, Gem, LineChart } from "lucide-react";
 
+// "Resumo executivo" foi descontinuado: acabou duplicando quase tudo que ja existe em
+// Vendas (mesmos KPIs, mesmo grafico mensal, mesma participacao por vendedora). A unica
+// parte exclusiva dele (as frases de leitura do periodo) foi para o topo de Vendas. A
+// rota continua em app/(dashboard)/_resumo (prefixo "_" tira do roteamento do Next sem
+// apagar o codigo) caso precise voltar.
 const NAV_ITEMS = [
-  {
-    href: "/resumo",
-    label: "Resumo executivo",
-    description: "O período contra o anterior",
-    icon: LayoutDashboard,
-  },
   {
     href: "/vendas",
     label: "Vendas",

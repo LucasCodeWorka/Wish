@@ -7,9 +7,9 @@ export default function Home() {
       <main className="previewHome">
         <h1>Wish BI</h1>
         <p>Prévia de demonstração com dados fictícios.</p>
-        <Link href="/resumo">Abrir o painel</Link>
+        <Link href="/vendas">Abrir o painel</Link>
       </main>
     );
   }
-  redirect("/resumo");
+  redirect("/vendas");
 }

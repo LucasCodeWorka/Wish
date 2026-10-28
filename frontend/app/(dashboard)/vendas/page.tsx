@@ -11,7 +11,7 @@ import {
 } from "../../lib/format";
 import { CategoryBars, SalesTrend } from "../../components/charts";
 import { FilterBar } from "../../components/FilterBar";
-import { Metric, PageHeader, RankingTable, numeric, text } from "../../components/ui";
+import { Insights, Metric, PageHeader, RankingTable, numeric, text } from "../../components/ui";
 
 export default async function VendasPage({
   searchParams,
@@ -50,15 +50,52 @@ export default async function VendasPage({
   const liquido = Number(kpis.grossSales || 0) - Number(kpis.returnValue || 0);
   const liquidoAnterior =
     Number(anterior.kpis.grossSales || 0) - Number(anterior.kpis.returnValue || 0);
+  const deltaLiquido = variacao(liquido, liquidoAnterior);
+
+  const atendimentos = Number(kpis.saleCount || 0);
+  const atendimentosAnterior = Number(anterior.kpis.saleCount || 0);
+  const deltaAtendimentos = variacao(atendimentos, atendimentosAnterior);
+
+  const tkm = Number(kpis.averageTicket || 0);
+  const tkmAnterior = Number(anterior.kpis.averageTicket || 0);
+  const deltaTkm = variacao(tkm, tkmAnterior);
 
   const pa = kpis.saleCount ? Number(kpis.unitsSold || 0) / Number(kpis.saleCount) : 0;
   const paAnterior = anterior.kpis.saleCount
     ? Number(anterior.kpis.unitsSold || 0) / Number(anterior.kpis.saleCount)
     : 0;
 
+  const devolucaoPct = Number(kpis.grossSales || 0)
+    ? Number(kpis.returnValue || 0) / Number(kpis.grossSales || 0)
+    : 0;
+  const devolucaoPctAnterior = Number(anterior.kpis.grossSales || 0)
+    ? Number(anterior.kpis.returnValue || 0) / Number(anterior.kpis.grossSales || 0)
+    : 0;
+
   const retornoClientes = retention.activeCustomersPeriod
     ? retention.returningCustomersPeriod / retention.activeCustomersPeriod
     : 0;
+
+  // Leitura do periodo: antes vivia so no Resumo executivo, que foi descontinuado por
+  // duplicar quase tudo desta aba. Essas frases sao a unica coisa que so existia la.
+  const leitura: string[] = [];
+
+  if (deltaLiquido !== null && deltaTkm !== null && deltaAtendimentos !== null) {
+    const direcao = deltaLiquido >= 0 ? "cresceu" : "caiu";
+    const motor =
+      Math.abs(deltaTkm) >= Math.abs(deltaAtendimentos) ? "ticket médio" : "volume de atendimentos";
+    leitura.push(
+      `Faturamento ${direcao} ${formatDelta(Math.abs(deltaLiquido))} ${rotuloAnterior}, com ticket médio em ${formatDelta(deltaTkm)} e atendimentos em ${formatDelta(deltaAtendimentos)}: o movimento veio principalmente de ${motor}.`,
+    );
+  }
+
+  leitura.push(
+    `Devoluções representam ${formatPercent(devolucaoPct)} da venda bruta, contra ${formatPercent(devolucaoPctAnterior)} no período comparado.`,
+  );
+
+  leitura.push(
+    `${formatNumber(retention.activeCustomersPeriod)} clientes compraram no período, sendo ${formatPercent(retornoClientes)} recorrentes.`,
+  );
 
   // Participacao sobre o total ATRIBUIDO a vendedoras: um movimento pode ter mais de uma
   // vendedora, entao a soma daqui pode superar a venda liquida da empresa.
@@ -140,17 +177,17 @@ export default async function VendasPage({
         <Metric
           label="Faturamento líquido"
           value={formatMoney(liquido)}
-          delta={variacao(liquido, liquidoAnterior)}
+          delta={deltaLiquido}
           deltaLabel={rotuloAnterior}
           detail={`${formatMoney(kpis.grossSales)} bruto · ${formatMoney(kpis.returnValue)} em devoluções`}
           icon={<Gem size={18} />}
         />
         <Metric
           label="Ticket médio (TKM)"
-          value={formatMoney(kpis.averageTicket)}
-          delta={variacao(Number(kpis.averageTicket || 0), Number(anterior.kpis.averageTicket || 0))}
+          value={formatMoney(tkm)}
+          delta={deltaTkm}
           deltaLabel={rotuloAnterior}
-          detail={`Sobre ${formatNumber(kpis.saleCount)} atendimentos`}
+          detail={`Sobre ${formatNumber(atendimentos)} atendimentos`}
           icon={<WalletCards size={18} />}
         />
         <Metric
@@ -163,13 +200,15 @@ export default async function VendasPage({
         />
         <Metric
           label="Atendimentos"
-          value={formatNumber(kpis.saleCount)}
-          delta={variacao(Number(kpis.saleCount || 0), Number(anterior.kpis.saleCount || 0))}
+          value={formatNumber(atendimentos)}
+          delta={deltaAtendimentos}
           deltaLabel={rotuloAnterior}
           detail={`${formatNumber(kpis.returnCount)} devoluções registradas`}
           icon={<ReceiptText size={18} />}
         />
       </section>
+
+      <Insights itens={leitura} />
 
       <section className="grid one">
         <article className="panel wide">
