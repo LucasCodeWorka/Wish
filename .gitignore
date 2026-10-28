@@ -12,6 +12,5 @@ __pycache__/
 .vercel/
 .claude/
 .agents/
-MAPEAMENTO_*.md
 reuniao-*.pptx
 wishbanc.py
