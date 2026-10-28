@@ -15,6 +15,15 @@
   --status-warning: #b57d00;
   --status-serious: #b8532f;
   --status-critical: #d03b3b;
+
+  /* Sidebar escura: fundo neutro (nao a cor da marca), conteudo continua claro ao lado.
+     E o mesmo padrao "sanduiche" escuro+claro de paineis como o Plano de Producao. */
+  --sidebar-bg: #17181a;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-text: #e4e4e7;
+  --sidebar-text-muted: #9a9aa4;
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active: rgba(255, 255, 255, 0.09);
 }
 
 * {
@@ -90,8 +99,9 @@ body {
   padding: 26px 16px;
   overflow-y: auto;
   overflow-x: hidden;
-  border-right: 1px solid var(--line);
-  background: var(--surface);
+  border-right: 1px solid var(--sidebar-border);
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
   transition: flex-basis 0.15s ease;
 }
 
@@ -119,6 +129,7 @@ body {
 .sidebarBrand strong {
   display: block;
   margin-top: 4px;
+  color: #fff;
   font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -130,16 +141,16 @@ body {
   place-items: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--sidebar-border);
   border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
+  background: transparent;
+  color: var(--sidebar-text-muted);
   cursor: pointer;
 }
 
 .sidebarToggle:hover {
-  color: var(--ink);
-  background: var(--line-soft);
+  color: #fff;
+  background: var(--sidebar-hover);
 }
 
 .sidebarNav {
@@ -155,13 +166,13 @@ body {
   gap: 12px;
   padding: 10px 10px 10px 13px;
   border-radius: 8px;
-  color: var(--ink);
+  color: var(--sidebar-text);
   text-decoration: none;
 }
 
 .sidebarLink svg {
   flex-shrink: 0;
-  color: var(--muted);
+  color: var(--sidebar-text-muted);
 }
 
 .sidebarLink span {
@@ -170,12 +181,12 @@ body {
 }
 
 .sidebarLink small {
-  color: var(--muted);
+  color: var(--sidebar-text-muted);
   font-size: 11px;
 }
 
 .sidebarLink:hover {
-  background: var(--line-soft);
+  background: var(--sidebar-hover);
 }
 
 .sidebar.collapsed .sidebarLink {
@@ -184,11 +195,12 @@ body {
   padding: 10px;
 }
 
-/* Estado ativo: cinza neutro de fundo + uma barra fina na cor da marca, em vez de
-   preencher o item inteiro de verde. A marca marca a posicao, nao domina o bloco. */
+/* Estado ativo: realce neutro (branco translucido) de fundo + uma barra fina na cor da
+   marca, em vez de preencher o item inteiro de verde. A marca marca a posicao, nao domina
+   o bloco — e sobre fundo escuro ela ainda pula aos olhos sem precisar de area grande. */
 .sidebarLink.active {
-  background: var(--line-soft);
-  color: var(--ink);
+  background: var(--sidebar-active);
+  color: #fff;
   font-weight: 600;
 }
 
@@ -200,7 +212,9 @@ body {
   bottom: 8px;
   width: 3px;
   border-radius: 999px;
-  background: var(--green);
+  /* --green e escuro demais para aparecer sobre o fundo quase preto da sidebar; aqui usa
+     um verde mais claro, so nesta barra e no icone ativo, para manter contraste. */
+  background: #4ade80;
 }
 
 .sidebar.collapsed .sidebarLink.active::before {
@@ -208,11 +222,11 @@ body {
 }
 
 .sidebarLink.active svg {
-  color: var(--green);
+  color: #4ade80;
 }
 
 .sidebarLink.active small {
-  color: var(--muted);
+  color: var(--sidebar-text-muted);
 }
 
 .content {
