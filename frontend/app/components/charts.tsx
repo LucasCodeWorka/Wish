@@ -122,37 +122,49 @@ type CategoryBarsProps = {
 };
 
 export function CategoryBars({ rows }: CategoryBarsProps) {
-  const data = rows.slice(0, 10).map((row) => ({
-    name: String(row.name || row.code || "-").slice(0, 18),
-    grossSales: Number(row.grossSales || 0),
-  }));
+  const data = rows.slice(0, 10).map((row, index) => {
+    const nomeBruto = String(row.name || "").trim();
+    // Nome em branco ou generico ("-") nao distingue duas pessoas diferentes no eixo —
+    // cai no codigo, que sempre existe, em vez de mostrar varias linhas iguais a "-".
+    const name =
+      nomeBruto && nomeBruto !== "-"
+        ? nomeBruto.slice(0, 20)
+        : row.code
+          ? `Cód. ${row.code}`
+          : `Item ${index + 1}`;
+    return { name, grossSales: Number(row.grossSales || 0) };
+  });
+
+  // Altura cresce com o numero de linhas: 10 categorias apertadas em 280px é o que fazia
+  // o Recharts pular rotulo do eixo (linha sim, linha nao) e as barras ficarem coladas.
+  const altura = Math.max(260, data.length * 38 + 50);
 
   return (
     <div className="chartFrame compact">
-      <ResponsiveContainer width="100%" height={280}>
-        <BarChart data={data} layout="vertical" margin={{ left: 12, right: 58 }}>
-          <CartesianGrid stroke="#eee7dc" horizontal={false} />
-          <XAxis
-            type="number"
-            tickFormatter={(value) => formatMoneyCompact(Number(value))}
-            tickLine={false}
-            axisLine={false}
-          />
+      <ResponsiveContainer width="100%" height={altura}>
+        <BarChart data={data} layout="vertical" margin={{ left: 12, right: 70, top: 4 }} barCategoryGap="30%">
+          <XAxis type="number" hide />
           <YAxis
             type="category"
             dataKey="name"
             tickLine={false}
             axisLine={false}
             width={124}
+            interval={0}
+            tick={{ fontSize: 12 }}
           />
-          <Tooltip formatter={(value) => formatMoney(Number(value))} />
-          <Bar dataKey="grossSales" fill="#1f4d47" radius={[0, 5, 5, 0]}>
+          <Tooltip
+            cursor={{ fill: "var(--line-soft)" }}
+            formatter={(value: number) => [formatMoney(value), "Valor"]}
+          />
+          <Bar dataKey="grossSales" fill="#1f4d47" radius={[0, 5, 5, 0]} maxBarSize={22}>
             <LabelList
               dataKey="grossSales"
               position="right"
               offset={8}
               fontSize={11}
-              fill="#5d5346"
+              fontWeight={600}
+              fill="var(--ink)"
               formatter={(value: number) => formatMoneyCompact(Number(value))}
             />
           </Bar>
