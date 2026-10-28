@@ -275,3 +275,32 @@ export async function getProductData(periodo: Periodo) {
     anterior,
   };
 }
+
+export type ConsignmentSummary = {
+  enviadoQty: number;
+  enviadoValor: number;
+  retornadoQty: number;
+  retornadoValor: number;
+  vendidoQty: number;
+  vendidoValor: number;
+  estoqueAtualQty: number;
+};
+
+export async function getConsignmentData(periodo: Periodo) {
+  const query = qs(periodo);
+
+  const [health, summary, byReseller, sales] = await Promise.all([
+    getHealth(),
+    getJson<{ summary: ConsignmentSummary }>(`/api/reports/consignment-summary${query}`),
+    getJson<{ rows: RankingRow[] }>(`/api/reports/consignment-by-reseller${query}`),
+    getJson<{ rows: RankingRow[] }>(`/api/reports/consignment-sales${query}`),
+  ]);
+
+  return {
+    health,
+    periodo,
+    summary: summary.summary,
+    byReseller: byReseller.rows,
+    sales: sales.rows,
+  };
+}

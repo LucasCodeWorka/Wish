@@ -369,4 +369,134 @@ export const queries = {
     WHERE grossSales > 0
     ORDER BY grossSales DESC
   `,
+
+  // Ciclo de consignacao confirmado com a Wish em reuniao: SCS tira a peca do estoque
+  // proprio e poe na conta do CONSIGNATARIO (quem fica com a peca para tentar vender).
+  // Dali em diante, dois caminhos: DSC devolve a peca pro estoque proprio (nao vendeu), ou
+  // VCS fecha a venda. No VCS a conta de ORIGEM e o consignatario e a conta de DESTINO e o
+  // CLIENTE FINAL de verdade — confirmado nos dados: nos 55 VCS do periodo testado, origem
+  // e destino sao sempre contas de cliente, nunca a mesma conta dos dois lados.
+  consignmentSummary: `
+    WITH enviado AS (
+      SELECT SUM(mp.quantidade) AS qty, SUM(mp.quantidade * mp.unitario) AS valor
+      FROM Movimentacao m
+      JOIN Operacao o ON o.id_operacao = m.rid_operacao
+      JOIN MovimentacaoProduto mp ON mp.id_movimentacaoproduto = m.id_movimentacao
+      WHERE RTRIM(o.codigo) = 'SCS'
+        AND m.data >= @startDate AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
+    ),
+    retornado AS (
+      SELECT SUM(mp.quantidade) AS qty, SUM(mp.quantidade * mp.unitario) AS valor
+      FROM Movimentacao m
+      JOIN Operacao o ON o.id_operacao = m.rid_operacao
+      JOIN MovimentacaoProduto mp ON mp.id_movimentacaoproduto = m.id_movimentacao
+      WHERE RTRIM(o.codigo) = 'DSC'
+        AND m.data >= @startDate AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
+    ),
+    vendido AS (
+      SELECT SUM(mp.quantidade) AS qty, SUM(mp.quantidade * mp.unitario) AS valor
+      FROM Movimentacao m
+      JOIN Operacao o ON o.id_operacao = m.rid_operacao
+      JOIN MovimentacaoProduto mp ON mp.id_movimentacaoproduto = m.id_movimentacao
+      WHERE RTRIM(o.codigo) = 'VCS'
+        AND m.data >= @startDate AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
+    ),
+    estoqueAtual AS (
+      SELECT SUM(e.quantidade) AS qty
+      FROM Estoque e
+      LEFT JOIN GrupoDeConta g ON g.id_grupodeconta = e.rid_grupodeconta
+      WHERE RTRIM(g.descricao) = 'CONTAS DE CLIENTES'
+    )
+    SELECT
+      ISNULL((SELECT qty FROM enviado), 0) AS enviadoQty,
+      ISNULL((SELECT valor FROM enviado), 0) AS enviadoValor,
+      ISNULL((SELECT qty FROM retornado), 0) AS retornadoQty,
+      ISNULL((SELECT valor FROM retornado), 0) AS retornadoValor,
+      ISNULL((SELECT qty FROM vendido), 0) AS vendidoQty,
+      ISNULL((SELECT valor FROM vendido), 0) AS vendidoValor,
+      ISNULL((SELECT qty FROM estoqueAtual), 0) AS estoqueAtualQty
+  `,
+
+  // Por consignatario: quanto recebeu, quanto devolveu, quanto vendeu (como origem do VCS)
+  // no periodo, e quanto esta com ele AGORA (estoque, sem filtro de periodo — e posicao).
+  consignmentByReseller: `
+    WITH enviado AS (
+      SELECT m.rid_conta_destino AS clienteId,
+        SUM(mp.quantidade) AS qty, SUM(mp.quantidade * mp.unitario) AS valor
+      FROM Movimentacao m
+      JOIN Operacao o ON o.id_operacao = m.rid_operacao
+      JOIN MovimentacaoProduto mp ON mp.id_movimentacaoproduto = m.id_movimentacao
+      WHERE RTRIM(o.codigo) = 'SCS'
+        AND m.data >= @startDate AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
+      GROUP BY m.rid_conta_destino
+    ),
+    retornado AS (
+      SELECT m.rid_conta_origem AS clienteId,
+        SUM(mp.quantidade) AS qty, SUM(mp.quantidade * mp.unitario) AS valor
+      FROM Movimentacao m
+      JOIN Operacao o ON o.id_operacao = m.rid_operacao
+      JOIN MovimentacaoProduto mp ON mp.id_movimentacaoproduto = m.id_movimentacao
+      WHERE RTRIM(o.codigo) = 'DSC'
+        AND m.data >= @startDate AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
+      GROUP BY m.rid_conta_origem
+    ),
+    vendido AS (
+      SELECT m.rid_conta_origem AS clienteId,
+        SUM(mp.quantidade) AS qty, SUM(mp.quantidade * mp.unitario) AS valor
+      FROM Movimentacao m
+      JOIN Operacao o ON o.id_operacao = m.rid_operacao
+      JOIN MovimentacaoProduto mp ON mp.id_movimentacaoproduto = m.id_movimentacao
+      WHERE RTRIM(o.codigo) = 'VCS'
+        AND m.data >= @startDate AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
+      GROUP BY m.rid_conta_origem
+    ),
+    estoqueAtual AS (
+      SELECT e.rid_conta AS clienteId, SUM(e.quantidade) AS qty
+      FROM Estoque e
+      LEFT JOIN GrupoDeConta g ON g.id_grupodeconta = e.rid_grupodeconta
+      WHERE RTRIM(g.descricao) = 'CONTAS DE CLIENTES'
+      GROUP BY e.rid_conta
+    )
+    SELECT TOP 40
+      RTRIM(c.codigo) AS code,
+      RTRIM(CONVERT(varchar(max), c.nomerazao)) AS name,
+      ISNULL(ea.qty, 0) AS estoqueAtual,
+      ISNULL(en.qty, 0) AS enviadoQty,
+      ISNULL(en.valor, 0) AS enviadoValor,
+      ISNULL(re.qty, 0) AS retornadoQty,
+      ISNULL(re.valor, 0) AS retornadoValor,
+      ISNULL(ve.qty, 0) AS vendidoQty,
+      ISNULL(ve.valor, 0) AS vendidoValor
+    FROM Conta c
+    LEFT JOIN enviado en ON en.clienteId = c.id_conta
+    LEFT JOIN retornado re ON re.clienteId = c.id_conta
+    LEFT JOIN vendido ve ON ve.clienteId = c.id_conta
+    LEFT JOIN estoqueAtual ea ON ea.clienteId = c.id_conta
+    WHERE ISNULL(en.qty, 0) > 0 OR ISNULL(re.qty, 0) > 0 OR ISNULL(ve.qty, 0) > 0 OR ISNULL(ea.qty, 0) > 0
+    ORDER BY ISNULL(ea.qty, 0) DESC, ISNULL(ve.valor, 0) DESC
+  `,
+
+  // Cada venda de consignacao (VCS), com o consignatario (origem) e o cliente final
+  // (destino) lado a lado — e a pergunta que a Wish fez: quem comprou de verdade.
+  consignmentSales: `
+    SELECT TOP 100
+      m.data AS date,
+      RTRIM(p.codigo) AS productCode,
+      RTRIM(p.descricao) AS productName,
+      RTRIM(co.codigo) AS resellerCode,
+      RTRIM(CONVERT(varchar(max), co.nomerazao)) AS resellerName,
+      RTRIM(cd.codigo) AS buyerCode,
+      RTRIM(CONVERT(varchar(max), cd.nomerazao)) AS buyerName,
+      mp.quantidade AS quantity,
+      mp.quantidade * mp.unitario AS value
+    FROM Movimentacao m
+    JOIN Operacao o ON o.id_operacao = m.rid_operacao
+    JOIN MovimentacaoProduto mp ON mp.id_movimentacaoproduto = m.id_movimentacao
+    LEFT JOIN Produto p ON p.id_produto = mp.rid_produto
+    LEFT JOIN Conta co ON co.id_conta = m.rid_conta_origem
+    LEFT JOIN Conta cd ON cd.id_conta = m.rid_conta_destino
+    WHERE RTRIM(o.codigo) = 'VCS'
+      AND m.data >= @startDate AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
+    ORDER BY m.data DESC
+  `,
 };

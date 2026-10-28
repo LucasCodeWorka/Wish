@@ -71,6 +71,28 @@ app.get(
 );
 
 app.get(
+  "/api/reports/consignment-summary",
+  asyncHandler(async (req, res) => {
+    const [summary] = await query(queries.consignmentSummary, rangeInputs(req));
+    res.json({ summary });
+  }),
+);
+
+app.get(
+  "/api/reports/consignment-by-reseller",
+  asyncHandler(async (req, res) => {
+    res.json({ rows: await query(queries.consignmentByReseller, rangeInputs(req)) });
+  }),
+);
+
+app.get(
+  "/api/reports/consignment-sales",
+  asyncHandler(async (req, res) => {
+    res.json({ rows: await query(queries.consignmentSales, rangeInputs(req)) });
+  }),
+);
+
+app.get(
   "/api/reports/salespeople",
   asyncHandler(async (req, res) => {
     res.json({ rows: await query(queries.salespeople, rangeInputs(req)) });
