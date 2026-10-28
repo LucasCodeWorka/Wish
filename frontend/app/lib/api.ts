@@ -169,6 +169,7 @@ async function getComparativo(periodo: Periodo) {
 
 export async function getSalesData(periodo: Periodo) {
   const query = qs(periodo);
+  const queryAnterior = qs(periodoAnterior(periodo));
 
   const [
     health,
@@ -178,6 +179,9 @@ export async function getSalesData(periodo: Periodo) {
     paymentMethods,
     customers,
     retention,
+    topProducts,
+    topProductsAnterior,
+    topSuppliers,
     anterior,
   ] = await Promise.all([
     getHealth(),
@@ -187,6 +191,11 @@ export async function getSalesData(periodo: Periodo) {
     getJson<{ rows: RankingRow[] }>(`/api/reports/payment-methods${query}`),
     getJson<{ rows: RankingRow[] }>(`/api/reports/customers${query}`),
     getJson<{ retention: CustomerRetention }>(`/api/reports/customer-retention${query}`),
+    getJson<{ rows: RankingRow[] }>(`/api/reports/top-products${query}`),
+    // So para a tabela comparativa de produto: mesmo recorte do ano anterior, nao reaproveita
+    // getComparativo porque esse bloco e especifico de produto, os outros chamadores nao usam.
+    getJson<{ rows: RankingRow[] }>(`/api/reports/top-products${queryAnterior}`),
+    getJson<{ rows: RankingRow[] }>(`/api/reports/top-suppliers${query}`),
     getComparativo(periodo),
   ]);
 
@@ -199,6 +208,9 @@ export async function getSalesData(periodo: Periodo) {
     paymentMethods: paymentMethods.rows,
     customers: customers.rows,
     retention: retention.retention,
+    topProducts: topProducts.rows,
+    topProductsAnterior: topProductsAnterior.rows,
+    topSuppliers: topSuppliers.rows,
     anterior,
   };
 }

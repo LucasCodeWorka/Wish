@@ -127,6 +127,44 @@ export const queries = {
     ORDER BY grossSales DESC
   `,
 
+  // Fornecedor nao e um campo do cadastro de Produto (nao existe essa coluna). Infere-se
+  // pela ULTIMA compra (operacao COM) de cada produto antes da venda: a conta de origem
+  // daquele movimento e o fornecedor. So 1 produto em todo o cadastro foi comprado de mais
+  // de um fornecedor, entao o rateio por "ultima compra" e seguro. Produto sem nenhuma
+  // compra registrada (EIN ou carga inicial, sem COM) cai em "Fornecedor nao identificado".
+  topSuppliers: `
+    WITH ultimaCompra AS (
+      SELECT
+        mp.rid_produto AS produtoId,
+        m.rid_conta_origem AS fornecedorId,
+        ROW_NUMBER() OVER (PARTITION BY mp.rid_produto ORDER BY m.data DESC) AS rn
+      FROM Movimentacao m
+      JOIN Operacao o ON o.id_operacao = m.rid_operacao
+      JOIN MovimentacaoProduto mp ON mp.id_movimentacaoproduto = m.id_movimentacao
+      WHERE RTRIM(o.codigo) = 'COM'
+    )
+    SELECT TOP 30
+      ISNULL(RTRIM(c.codigo), 'N/D') AS code,
+      CASE
+        WHEN c.id_conta IS NULL THEN 'Fornecedor nao identificado'
+        WHEN LEN(RTRIM(CONVERT(varchar(max), c.nomerazao))) = 0 THEN RTRIM(c.codigo)
+        ELSE RTRIM(CONVERT(varchar(max), c.nomerazao))
+      END AS name,
+      COUNT(DISTINCT m.id_movimentacao) AS salesCount,
+      SUM(mp.quantidade) AS quantity,
+      SUM(mp.quantidade * mp.unitario) AS grossSales
+    FROM Movimentacao m
+    JOIN Operacao o ON o.id_operacao = m.rid_operacao
+    JOIN MovimentacaoProduto mp ON mp.id_movimentacaoproduto = m.id_movimentacao
+    LEFT JOIN ultimaCompra uc ON uc.produtoId = mp.rid_produto AND uc.rn = 1
+    LEFT JOIN Conta c ON c.id_conta = uc.fornecedorId
+    WHERE RTRIM(o.codigo) IN ${salesOperationFilter}
+      AND m.data >= @startDate
+      AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
+    GROUP BY c.id_conta, RTRIM(c.codigo), RTRIM(CONVERT(varchar(max), c.nomerazao))
+    ORDER BY grossSales DESC
+  `,
+
   salespeople: `
     SELECT TOP 30
       RTRIM(c.codigo) AS code,

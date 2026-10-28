@@ -64,6 +64,13 @@ app.get(
 );
 
 app.get(
+  "/api/reports/top-suppliers",
+  asyncHandler(async (req, res) => {
+    res.json({ rows: await query(queries.topSuppliers, rangeInputs(req)) });
+  }),
+);
+
+app.get(
   "/api/reports/salespeople",
   asyncHandler(async (req, res) => {
     res.json({ rows: await query(queries.salespeople, rangeInputs(req)) });

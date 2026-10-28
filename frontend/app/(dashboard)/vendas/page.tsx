@@ -1,7 +1,8 @@
-import { Gem, Layers, ReceiptText, Users, WalletCards } from "lucide-react";
+import { Gem, Layers, PackageSearch, ReceiptText, TrendingDown, TrendingUp, Truck, Users, WalletCards } from "lucide-react";
 import { getSalesData, periodoDaUrl } from "../../lib/api";
 import {
   formatDecimal,
+  formatDelta,
   formatMoney,
   formatNumber,
   formatPercent,
@@ -77,6 +78,51 @@ export default async function VendasPage({
     };
   });
 
+  // Comparativo por produto: top 20 do periodo atual, casado pelo codigo com o mesmo
+  // produto no periodo anterior. Produto que nao vendeu no periodo anterior entra com 0,
+  // nao desaparece da tabela.
+  const anteriorPorCodigo = new Map(
+    data.topProductsAnterior.map((row) => [text(row, "code"), row]),
+  );
+  const comparativoProdutos = data.topProducts.slice(0, 20).map((row) => {
+    const code = text(row, "code");
+    const atual = { qtd: numeric(row, "quantity"), valor: numeric(row, "grossSales") };
+    const prev = anteriorPorCodigo.get(code);
+    const anteriorValores = {
+      qtd: prev ? numeric(prev, "quantity") : 0,
+      valor: prev ? numeric(prev, "grossSales") : 0,
+    };
+    return {
+      code,
+      name: text(row, "name"),
+      qtdAtual: atual.qtd,
+      valorAtual: atual.valor,
+      qtdAnterior: anteriorValores.qtd,
+      valorAnterior: anteriorValores.valor,
+      varQtd: variacao(atual.qtd, anteriorValores.qtd),
+      varValor: variacao(atual.valor, anteriorValores.valor),
+    };
+  });
+
+  function VarCell({ value }: { value: number | null }) {
+    if (value === null) return <span style={{ color: "var(--muted)" }}>novo</span>;
+    const subiu = value > 0;
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          color: subiu ? "var(--status-good)" : value < 0 ? "var(--status-critical)" : "var(--muted)",
+          fontWeight: 700,
+        }}
+      >
+        {subiu ? <TrendingUp size={13} /> : value < 0 ? <TrendingDown size={13} /> : null}
+        {formatDelta(value)}
+      </span>
+    );
+  }
+
   return (
     <main className="shell">
       <PageHeader
@@ -137,7 +183,62 @@ export default async function VendasPage({
         </article>
       </section>
 
-      <section className="grid two">
+      <section className="grid three">
+        <article className="panel">
+          <div className="panelHead">
+            <div>
+              <h2>Top vendedoras</h2>
+              <p>Por valor atribuído</p>
+            </div>
+            <Users size={18} />
+          </div>
+          <CategoryBars
+            rows={vendedoras.map((row) => ({
+              name: text(row, "name"),
+              grossSales: numeric(row, "movementValue"),
+            }))}
+          />
+        </article>
+
+        <article className="panel">
+          <div className="panelHead">
+            <div>
+              <h2>Top fornecedores</h2>
+              <p>Por valor vendido</p>
+            </div>
+            <Truck size={18} />
+          </div>
+          <CategoryBars
+            rows={data.topSuppliers.map((row) => ({
+              name: text(row, "name"),
+              grossSales: numeric(row, "grossSales"),
+            }))}
+          />
+          <p className="panel note">
+            Fornecedor não é um cadastro do produto — é inferido pela última compra (COM)
+            registrada daquele produto. Produto sem compra registrada aparece como
+            &quot;Fornecedor não identificado&quot;.
+          </p>
+        </article>
+
+        <article className="panel">
+          <div className="panelHead">
+            <div>
+              <h2>Top produtos</h2>
+              <p>Por valor vendido</p>
+            </div>
+            <PackageSearch size={18} />
+          </div>
+          <CategoryBars
+            rows={data.topProducts.map((row) => ({
+              name: text(row, "name"),
+              grossSales: numeric(row, "grossSales"),
+            }))}
+          />
+        </article>
+      </section>
+
+      <section className="grid one">
         <article className="panel wide">
           <div className="panelHead">
             <div>
@@ -166,20 +267,51 @@ export default async function VendasPage({
             líquida da empresa.
           </p>
         </article>
+      </section>
 
-        <article className="panel">
+      <section className="grid one">
+        <article className="panel wide">
           <div className="panelHead">
             <div>
-              <h2>Participação por vendedora</h2>
-              <p>Top 10 por valor atribuído</p>
+              <h2>Comparativo de produtos</h2>
+              <p>Top 20 do período atual, pareado por código com {rotuloAnterior.replace("vs. ", "")}</p>
             </div>
           </div>
-          <CategoryBars
-            rows={vendedoras.map((row) => ({
-              name: text(row, "name"),
-              grossSales: numeric(row, "movementValue"),
-            }))}
-          />
+          <div className="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Qtd. atual</th>
+                  <th>Qtd. anterior</th>
+                  <th>Var. qtd.</th>
+                  <th>Valor atual</th>
+                  <th>Valor anterior</th>
+                  <th>Var. valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparativoProdutos.map((row) => (
+                  <tr key={row.code}>
+                    <td>
+                      <strong>{row.code}</strong>
+                      <div style={{ color: "var(--muted)", fontSize: 12 }}>{row.name}</div>
+                    </td>
+                    <td>{formatNumber(row.qtdAtual)}</td>
+                    <td>{formatNumber(row.qtdAnterior)}</td>
+                    <td>
+                      <VarCell value={row.varQtd} />
+                    </td>
+                    <td>{formatMoney(row.valorAtual)}</td>
+                    <td>{formatMoney(row.valorAnterior)}</td>
+                    <td>
+                      <VarCell value={row.varValor} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </article>
       </section>
 
