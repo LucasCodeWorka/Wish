@@ -3,13 +3,18 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, ChevronLeft, ChevronRight, Gem, LineChart, Repeat, Store } from "lucide-react";
+import { Boxes, ChevronLeft, ChevronRight, Gem, LineChart } from "lucide-react";
 
 // "Resumo executivo" foi descontinuado: acabou duplicando quase tudo que ja existe em
 // Vendas (mesmos KPIs, mesmo grafico mensal, mesma participacao por vendedora). A unica
 // parte exclusiva dele (as frases de leitura do periodo) foi para o topo de Vendas. A
 // rota continua em app/(dashboard)/_resumo (prefixo "_" tira do roteamento do Next sem
 // apagar o codigo) caso precise voltar.
+//
+// Mesma logica para "Canais" (TKM/PA por canal de venda — foi para dentro de Vendas) e
+// "Consignacao" (ciclo SCS/DSC/VCS — foi para dentro de Estoque): sao desdobramento de uma
+// aba que ja existe, nao justificam item proprio no menu. Regra daqui pra frente: analise
+// nova entra na aba existente mais proxima; so vira item de menu se o usuario pedir.
 const NAV_ITEMS = [
   {
     href: "/vendas",
@@ -28,18 +33,6 @@ const NAV_ITEMS = [
     label: "Produtos",
     description: "Ranking e curva ABC",
     icon: Gem,
-  },
-  {
-    href: "/consignacao",
-    label: "Consignação",
-    description: "Ciclo e consignatários",
-    icon: Repeat,
-  },
-  {
-    href: "/canais",
-    label: "Canais",
-    description: "TKM e PA por canal de venda",
-    icon: Store,
   },
 ];
 

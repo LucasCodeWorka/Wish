@@ -1,5 +1,5 @@
-import { Gem, Layers, PackageSearch, ReceiptText, TrendingDown, TrendingUp, Truck, Users, WalletCards } from "lucide-react";
-import { getSalesData, periodoDaUrl } from "../../lib/api";
+import { Gem, Layers, PackageSearch, ReceiptText, Store, TrendingDown, TrendingUp, Truck, Users, WalletCards } from "lucide-react";
+import { getChannelData, getSalesData, periodoDaUrl } from "../../lib/api";
 import {
   formatDecimal,
   formatDelta,
@@ -25,8 +25,10 @@ export default async function VendasPage({
   let data: Awaited<ReturnType<typeof getSalesData>> | null = null;
   let error: string | null = null;
 
+  let canais: Awaited<ReturnType<typeof getChannelData>> | null = null;
+
   try {
-    data = await getSalesData(periodo);
+    [data, canais] = await Promise.all([getSalesData(periodo), getChannelData(periodo)]);
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Falha ao carregar dados";
   }
@@ -140,6 +142,55 @@ export default async function VendasPage({
       varValor: variacao(atual.valor, anteriorValores.valor),
     };
   });
+
+  // Comparativo por canal: as 14 "empresas" cadastradas nao sao lojas fisicas, sao canal de
+  // venda (loja principal, site, showroom, pais, parceria, pessoa) — TKM e PA variam muito
+  // entre elas (ex.: canal de atacado com 6 vendas e ticket de centenas de milhares,
+  // escondido se somado com o resto). So entram canais com venda no periodo selecionado.
+  const canaisAnteriorPorCodigo = new Map(
+    (canais?.kpisAnterior || []).map((row) => [text(row, "code"), row]),
+  );
+  const estoquePorCanal = new Map((canais?.stock || []).map((row) => [text(row, "code"), row]));
+  const produtosPorCanal = new Map<string, string[]>();
+  (canais?.topProducts || []).forEach((row) => {
+    const codigo = text(row, "empresaCode");
+    const lista = produtosPorCanal.get(codigo) || [];
+    lista.push(text(row, "code"));
+    produtosPorCanal.set(codigo, lista);
+  });
+  const comparativoCanais = (canais?.kpis || [])
+    .filter((row) => numeric(row, "saleCount") > 0)
+    .map((row) => {
+      const codigo = text(row, "code");
+      const atendimentosCanal = numeric(row, "saleCount");
+      const valorCanal = numeric(row, "grossSales");
+      const unidadesCanal = numeric(row, "unitsSold");
+      const tkmCanal = atendimentosCanal ? valorCanal / atendimentosCanal : 0;
+      const paCanal = atendimentosCanal ? unidadesCanal / atendimentosCanal : 0;
+
+      const ant = canaisAnteriorPorCodigo.get(codigo);
+      const atendimentosAnt = ant ? numeric(ant, "saleCount") : 0;
+      const valorAnt = ant ? numeric(ant, "grossSales") : 0;
+      const unidadesAnt = ant ? numeric(ant, "unitsSold") : 0;
+      const tkmAnt = atendimentosAnt ? valorAnt / atendimentosAnt : 0;
+      const paAnt = atendimentosAnt ? unidadesAnt / atendimentosAnt : 0;
+
+      const estoqueRow = estoquePorCanal.get(codigo);
+      return {
+        code: codigo,
+        name: text(row, "name"),
+        atendimentos: atendimentosCanal,
+        tkm: tkmCanal,
+        tkmAnterior: tkmAnt,
+        varTkm: variacao(tkmCanal, tkmAnt),
+        pa: paCanal,
+        paAnterior: paAnt,
+        varPa: variacao(paCanal, paAnt),
+        estoque: estoqueRow ? numeric(estoqueRow, "stockQty") : 0,
+        melhoresProdutos: (produtosPorCanal.get(codigo) || []).join(", ") || "—",
+      };
+    })
+    .sort((a, b) => b.atendimentos - a.atendimentos);
 
   function VarCell({ value }: { value: number | null }) {
     if (value === null) return <span style={{ color: "var(--muted)" }}>novo</span>;
@@ -353,6 +404,71 @@ export default async function VendasPage({
           </div>
         </article>
       </section>
+
+      {comparativoCanais.length > 0 && (
+        <section className="grid one">
+          <article className="panel wide">
+            <div className="panelHead">
+              <div>
+                <h2>Comparativo por canal</h2>
+                <p>
+                  As 14 &quot;empresas&quot; cadastradas não são lojas físicas — são canal de
+                  venda (loja principal, site, showroom, país, parceria, pessoa). Só entram
+                  canais com venda no período.
+                </p>
+              </div>
+              <Store size={18} />
+            </div>
+            <div className="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Canal</th>
+                    <th>Atendimentos</th>
+                    <th>TKM atual</th>
+                    <th>TKM ano anterior</th>
+                    <th>Var. TKM</th>
+                    <th>PA atual</th>
+                    <th>PA ano anterior</th>
+                    <th>Var. PA</th>
+                    <th>Estoque</th>
+                    <th>Melhores produtos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparativoCanais.map((row) => (
+                    <tr key={row.code}>
+                      <td>
+                        <strong>{row.name}</strong>
+                        <div style={{ color: "var(--muted)", fontSize: 12 }}>{row.code}</div>
+                      </td>
+                      <td>{formatNumber(row.atendimentos)}</td>
+                      <td>{formatMoney(row.tkm)}</td>
+                      <td>{formatMoney(row.tkmAnterior)}</td>
+                      <td>
+                        <VarCell value={row.varTkm} />
+                      </td>
+                      <td>{formatDecimal(row.pa, 2)}</td>
+                      <td>{formatDecimal(row.paAnterior, 2)}</td>
+                      <td>
+                        <VarCell value={row.varPa} />
+                      </td>
+                      <td>{formatNumber(row.estoque)}</td>
+                      <td style={{ fontSize: 12 }}>{row.melhoresProdutos}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="panel note">
+              TKM e PA do ano anterior comparam o mesmo canal no mesmo recorte de datas do
+              ano passado. &quot;Estoque&quot; é a posição própria de hoje (grupo ESTOQUES),
+              não do período. &quot;Melhores produtos&quot; são os 3 de maior valor vendido no
+              canal, no período selecionado.
+            </p>
+          </article>
+        </section>
+      )}
 
       <section className="grid two">
         <article className="panel">

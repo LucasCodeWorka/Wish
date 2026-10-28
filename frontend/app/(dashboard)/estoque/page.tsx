@@ -1,6 +1,12 @@
-import { AlertTriangle, Boxes, Gem, PackageX, TrendingDown } from "lucide-react";
-import { getInventoryData } from "../../lib/api";
-import { formatDecimal, formatMoney, formatNumber } from "../../lib/format";
+import { AlertTriangle, Boxes, PackageX, TrendingDown } from "lucide-react";
+import { getConsignmentData, getInventoryData, resolvePreset } from "../../lib/api";
+import {
+  formatDateShort,
+  formatDecimal,
+  formatMoney,
+  formatNumber,
+  formatPercent,
+} from "../../lib/format";
 import { StockCoverageBuckets } from "../../components/charts";
 import {
   CoverageBadge,
@@ -8,6 +14,8 @@ import {
   PageHeader,
   RankingTable,
   classifyCoverage,
+  numeric,
+  text,
 } from "../../components/ui";
 import type { StockCoverageRow } from "../../lib/api";
 
@@ -44,10 +52,17 @@ function buildCoverage(rows: StockCoverageRow[]) {
 
 export default async function EstoquePage() {
   let data: Awaited<ReturnType<typeof getInventoryData>> | null = null;
+  // Consignacao usa um periodo fixo de 12 meses: esta pagina e uma foto de posicao, sem
+  // filtro proprio, entao "enviado/vendido no periodo" precisa de alguma janela — 12 meses
+  // fica consistente com o padrao das outras abas sem exigir um seletor so para isto aqui.
+  let consignacao: Awaited<ReturnType<typeof getConsignmentData>> | null = null;
   let error: string | null = null;
 
   try {
-    data = await getInventoryData();
+    [data, consignacao] = await Promise.all([
+      getInventoryData(),
+      getConsignmentData(resolvePreset("12m")),
+    ]);
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Falha ao carregar dados";
   }
@@ -98,6 +113,30 @@ export default async function EstoquePage() {
       return b.avgMonthlySales - a.avgMonthlySales;
     })
     .slice(0, 60);
+
+  // Consignacao: SCS tira do estoque proprio e poe na conta do consignatario; dali, DSC
+  // devolve ou VCS vende. "Com ele agora" e posicao de hoje; o resto e do periodo fixo acima.
+  const resumoConsignacao = consignacao?.summary;
+  const decididas = resumoConsignacao
+    ? resumoConsignacao.vendidoQty + resumoConsignacao.retornadoQty
+    : 0;
+  const taxaConversao = decididas && resumoConsignacao ? resumoConsignacao.vendidoQty / decididas : 0;
+  const porConsignatario = (consignacao?.byReseller || []).map((row) => {
+    const vendido = numeric(row, "vendidoQty");
+    const retornado = numeric(row, "retornadoQty");
+    const decididasRow = vendido + retornado;
+    return { ...row, taxaConversao: decididasRow ? vendido / decididasRow : null };
+  });
+  const vendasConsignacao = (consignacao?.sales || []).map((row) => {
+    const consignatario = text(row, "resellerName");
+    const compradorCode = text(row, "buyerCode");
+    const consignatarioCode = text(row, "resellerCode");
+    const clienteLabel =
+      compradorCode && compradorCode !== consignatarioCode
+        ? `${consignatario} → ${text(row, "buyerName")}`
+        : consignatario;
+    return { ...row, date: formatDateShort(String(row.date || "")), clienteLabel };
+  });
 
   return (
     <main className="shell">
@@ -221,6 +260,77 @@ export default async function EstoquePage() {
           />
         </article>
       </section>
+
+      {resumoConsignacao && (
+        <section className="grid one">
+          <article className="panel wide">
+            <div className="panelHead">
+              <div>
+                <h2>Consignação</h2>
+                <p>
+                  Ciclo confirmado com a Wish: SCS tira do estoque próprio e põe na conta do
+                  consignatário; dali, DSC devolve ou VCS vende. Números de movimento são dos
+                  últimos 12 meses — &quot;com ele agora&quot; é a posição de hoje.
+                </p>
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 16,
+                marginBottom: 14,
+                fontSize: 13,
+                color: "var(--muted)",
+              }}
+            >
+              <span>
+                Em consignação hoje: <strong style={{ color: "var(--ink)" }}>{formatNumber(resumoConsignacao.estoqueAtualQty)}</strong> peças
+              </span>
+              <span>
+                Enviado (12m): <strong style={{ color: "var(--ink)" }}>{formatNumber(resumoConsignacao.enviadoQty)}</strong> ({formatMoney(resumoConsignacao.enviadoValor)})
+              </span>
+              <span>
+                Vendido (12m): <strong style={{ color: "var(--ink)" }}>{formatNumber(resumoConsignacao.vendidoQty)}</strong> ({formatMoney(resumoConsignacao.vendidoValor)})
+              </span>
+              <span>
+                Taxa de conversão: <strong style={{ color: "var(--ink)" }}>{formatPercent(taxaConversao)}</strong>
+              </span>
+            </div>
+            <RankingTable
+              rows={porConsignatario}
+              limit={15}
+              columns={[
+                { key: "code", label: "Código" },
+                { key: "name", label: "Consignatário" },
+                { key: "estoqueAtual", label: "Com ele agora", type: "number" },
+                { key: "enviadoQty", label: "Enviado (qtd)", type: "number" },
+                { key: "retornadoQty", label: "Devolvido (qtd)", type: "number" },
+                { key: "vendidoQty", label: "Vendido (qtd)", type: "number" },
+                { key: "vendidoValor", label: "Vendido (valor)", type: "money" },
+              ]}
+            />
+            <p className="panel note">
+              As vendas de consignação (VCS) consultadas nunca mostram um comprador final
+              diferente do consignatário no sistema — origem e destino do movimento vêm
+              sempre a mesma conta. Pergunta em aberto para a Wish: esse dado existe em
+              algum outro lugar do ERP?
+            </p>
+            {vendasConsignacao.length > 0 && (
+              <RankingTable
+                rows={vendasConsignacao}
+                limit={10}
+                columns={[
+                  { key: "date", label: "Data" },
+                  { key: "productCode", label: "Produto" },
+                  { key: "clienteLabel", label: "Cliente" },
+                  { key: "value", label: "Valor", type: "money" },
+                ]}
+              />
+            )}
+          </article>
+        </section>
+      )}
     </main>
   );
 }
