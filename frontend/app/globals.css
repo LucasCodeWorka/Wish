@@ -235,9 +235,38 @@ body {
 }
 
 .shell {
-  width: min(1500px, 100%);
+  width: min(1760px, 100%);
   margin: 0 auto;
   padding: 28px;
+}
+
+/* Divide o miolo de um painel em duas colunas: duas tabelas curtas lado a lado ocupam
+   metade da altura que ocupariam empilhadas, sem perder legibilidade. */
+.panelSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 18px;
+}
+
+.panelSplit > div {
+  min-width: 0;
+}
+
+.panelSplitTitle {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Coluna lateral de um grid two: empilha dois paineis de apoio ao lado de um principal. */
+.stackColumn {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
 }
 
 /* Cabecalho compacto: a versao anterior reservava 210px de altura e um h1 de ate 80px, o que
@@ -721,6 +750,11 @@ tr:hover td {
   }
 
   .grid.two {
+    grid-template-columns: 1fr;
+  }
+
+  /* Duas tabelas lado a lado so se paga em tela larga; abaixo disso, empilha. */
+  .panelSplit {
     grid-template-columns: 1fr;
   }
 }

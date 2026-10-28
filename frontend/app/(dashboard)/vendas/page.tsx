@@ -481,45 +481,44 @@ export default async function VendasPage({
           </p>
         </article>
 
-        <article className="panel soft">
-          <div className="panelHead">
-            <div>
-              <h2>Participação</h2>
-              <p>Top 10 por valor atribuído</p>
+        <div className="stackColumn">
+          <article className="panel soft">
+            <div className="panelHead">
+              <div>
+                <h2>Participação</h2>
+                <p>Top 10 por valor atribuído</p>
+              </div>
             </div>
-          </div>
-          <CategoryBars
-            rows={vendedoras.map((row) => ({
-              name: text(row, "name"),
-              grossSales: numeric(row, "movementValue"),
-            }))}
-          />
-        </article>
-      </section>
+            <CategoryBars
+              rows={vendedoras.map((row) => ({
+                name: text(row, "name"),
+                grossSales: numeric(row, "movementValue"),
+              }))}
+            />
+          </article>
 
-      <section className="grid one">
-        <article className="panel">
-          <div className="panelHead">
-            <div>
-              <h2>Clientes</h2>
-              <p>
-                {formatNumber(retention.activeCustomersPeriod)} ativos no período ·{" "}
-                {formatNumber(retention.newCustomersPeriod)} novos ·{" "}
-                {formatNumber(retention.returningCustomersPeriod)} recorrentes (
-                {formatPercent(retornoClientes)})
-              </p>
+          <article className="panel soft">
+            <div className="panelHead">
+              <div>
+                <h2>Clientes</h2>
+                <p>
+                  {formatNumber(retention.activeCustomersPeriod)} ativos ·{" "}
+                  {formatNumber(retention.newCustomersPeriod)} novos ·{" "}
+                  {formatPercent(retornoClientes)} recorrentes
+                </p>
+              </div>
             </div>
-          </div>
-          <RankingTable
-            rows={data.customers}
-            columns={[
-              { key: "code", label: "Código" },
-              { key: "name", label: "Cliente" },
-              { key: "purchaseCount", label: "Compras", type: "number" },
-              { key: "value", label: "Valor", type: "money" },
-            ]}
-          />
-        </article>
+            <RankingTable
+              rows={data.customers}
+              limit={8}
+              columns={[
+                { key: "name", label: "Cliente" },
+                { key: "purchaseCount", label: "Compras", type: "number" },
+                { key: "value", label: "Valor", type: "money" },
+              ]}
+            />
+          </article>
+        </div>
       </section>
 
       <Chapter
@@ -611,37 +610,45 @@ export default async function VendasPage({
                 Taxa de conversão: <strong style={{ color: "var(--ink)" }}>{formatPercent(taxaConversao)}</strong>
               </span>
             </div>
-            <RankingTable
-              rows={porConsignatario}
-              limit={15}
-              columns={[
-                { key: "code", label: "Código" },
-                { key: "name", label: "Consignatário" },
-                { key: "estoqueAtual", label: "Com ele agora", type: "number" },
-                { key: "enviadoQty", label: "Enviado (qtd)", type: "number" },
-                { key: "retornadoQty", label: "Devolvido (qtd)", type: "number" },
-                { key: "vendidoQty", label: "Vendido (qtd)", type: "number" },
-                { key: "vendidoValor", label: "Vendido (valor)", type: "money" },
-              ]}
-            />
+            <div className="panelSplit">
+              <div>
+                <p className="panelSplitTitle">Por consignatário</p>
+                <RankingTable
+                  rows={porConsignatario}
+                  limit={12}
+                  columns={[
+                    { key: "name", label: "Consignatário" },
+                    { key: "estoqueAtual", label: "Com ele agora", type: "number" },
+                    { key: "enviadoQty", label: "Enviado", type: "number" },
+                    { key: "retornadoQty", label: "Devolvido", type: "number" },
+                    { key: "vendidoQty", label: "Vendido", type: "number" },
+                    { key: "vendidoValor", label: "Valor vendido", type: "money" },
+                  ]}
+                />
+              </div>
+
+              {vendasConsignacao.length > 0 && (
+                <div>
+                  <p className="panelSplitTitle">Vendas recentes</p>
+                  <RankingTable
+                    rows={vendasConsignacao}
+                    limit={12}
+                    columns={[
+                      { key: "date", label: "Data" },
+                      { key: "productCode", label: "Produto" },
+                      { key: "clienteLabel", label: "Cliente" },
+                      { key: "value", label: "Valor", type: "money" },
+                    ]}
+                  />
+                </div>
+              )}
+            </div>
             <p className="panel note">
               As vendas de consignação (VCS) consultadas nunca mostram um comprador final
               diferente do consignatário no sistema — origem e destino do movimento vêm
               sempre a mesma conta. Pergunta em aberto para a Wish: esse dado existe em
               algum outro lugar do ERP?
             </p>
-            {vendasConsignacao.length > 0 && (
-              <RankingTable
-                rows={vendasConsignacao}
-                limit={10}
-                columns={[
-                  { key: "date", label: "Data" },
-                  { key: "productCode", label: "Produto" },
-                  { key: "clienteLabel", label: "Cliente" },
-                  { key: "value", label: "Valor", type: "money" },
-                ]}
-              />
-            )}
           </article>
         </section>
       )}
