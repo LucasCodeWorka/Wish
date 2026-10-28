@@ -170,6 +170,10 @@ async function getComparativo(periodo: Periodo) {
 export async function getSalesData(periodo: Periodo) {
   const query = qs(periodo);
   const queryAnterior = qs(periodoAnterior(periodo));
+  // A leitura ABC da vitrine usa sempre os ultimos 12 meses fechados, mesmo quando o
+  // filtro geral da pagina aponta para outro recorte.
+  const productAbcPeriod = resolvePreset("12m");
+  const productAbcQuery = qs(productAbcPeriod);
 
   const [
     health,
@@ -178,8 +182,11 @@ export async function getSalesData(periodo: Periodo) {
     salespeople,
     paymentMethods,
     customers,
+    customerSellers,
+    customerProducts,
     retention,
     topProducts,
+    productAbc,
     topProductsAnterior,
     topSuppliers,
     anterior,
@@ -190,8 +197,11 @@ export async function getSalesData(periodo: Periodo) {
     getJson<{ rows: RankingRow[] }>(`/api/reports/salespeople${query}`),
     getJson<{ rows: RankingRow[] }>(`/api/reports/payment-methods${query}`),
     getJson<{ rows: RankingRow[] }>(`/api/reports/customers${query}`),
+    getJson<{ rows: RankingRow[] }>(`/api/reports/customer-sellers${query}`),
+    getJson<{ rows: RankingRow[] }>(`/api/reports/customer-products${query}`),
     getJson<{ retention: CustomerRetention }>(`/api/reports/customer-retention${query}`),
     getJson<{ rows: RankingRow[] }>(`/api/reports/top-products${query}`),
+    getJson<{ rows: AbcRow[] }>(`/api/reports/product-abc${productAbcQuery}`),
     // So para a tabela comparativa de produto: mesmo recorte do ano anterior, nao reaproveita
     // getComparativo porque esse bloco e especifico de produto, os outros chamadores nao usam.
     getJson<{ rows: RankingRow[] }>(`/api/reports/top-products${queryAnterior}`),
@@ -207,8 +217,12 @@ export async function getSalesData(periodo: Periodo) {
     salespeople: salespeople.rows,
     paymentMethods: paymentMethods.rows,
     customers: customers.rows,
+    customerSellers: customerSellers.rows,
+    customerProducts: customerProducts.rows,
     retention: retention.retention,
     topProducts: topProducts.rows,
+    productAbc: productAbc.rows,
+    productAbcPeriod,
     topProductsAnterior: topProductsAnterior.rows,
     topSuppliers: topSuppliers.rows,
     anterior,
@@ -284,6 +298,7 @@ export type ConsignmentSummary = {
   vendidoQty: number;
   vendidoValor: number;
   estoqueAtualQty: number;
+  estoqueAtualValorCusto: number;
 };
 
 export async function getConsignmentData(periodo: Periodo) {

@@ -9,6 +9,11 @@ import {
   Cell,
   Legend,
   LabelList,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -55,15 +60,15 @@ export function SalesTrend({ rows, rowsAnterior = [] }: SalesTrendProps) {
 
   return (
     <div className="chartFrame">
-      <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={data} margin={{ top: 24, right: 16, left: 0, bottom: 0 }}>
+      <ResponsiveContainer width="100%" height={360}>
+        <AreaChart data={data} margin={{ top: 34, right: 20, left: 8, bottom: 8 }}>
           <defs>
             <linearGradient id="salesGradient" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#b8935f" stopOpacity={0.36} />
-              <stop offset="100%" stopColor="#b8935f" stopOpacity={0.02} />
+              <stop offset="0%" stopColor="#b8935f" stopOpacity={0.2} />
+              <stop offset="100%" stopColor="#b8935f" stopOpacity={0.01} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="#eee7dc" vertical={false} />
+          <CartesianGrid stroke="#d9dee3" vertical={false} />
           <XAxis
             dataKey="name"
             tickLine={false}
@@ -71,22 +76,26 @@ export function SalesTrend({ rows, rowsAnterior = [] }: SalesTrendProps) {
             tickMargin={10}
             interval="preserveStartEnd"
             minTickGap={16}
+            tick={{ fill: "#18181b", fontSize: 13, fontWeight: 600 }}
           />
           <YAxis
             tickFormatter={(value) => formatMoneyCompact(Number(value))}
             tickLine={false}
             axisLine={false}
-            width={62}
+            width={76}
+            tick={{ fill: "#18181b", fontSize: 13, fontWeight: 600 }}
           />
           <Tooltip formatter={(value) => formatMoney(Number(value))} />
-          <Legend verticalAlign="top" height={28} />
+          <Legend verticalAlign="top" height={30} wrapperStyle={{ color: "#18181b", fontSize: 14, fontWeight: 700 }} />
           {rowsAnterior.length > 0 && (
             <Area
               dataKey="anterior"
               type="monotone"
-              stroke="#b3a894"
-              strokeWidth={1.5}
+              stroke="#59636f"
+              strokeWidth={2}
               strokeDasharray="5 4"
+              dot={{ r: 3, fill: "#ffffff", stroke: "#59636f", strokeWidth: 2 }}
+              activeDot={{ r: 5 }}
               fill="none"
               name="Período anterior"
               connectNulls
@@ -95,17 +104,20 @@ export function SalesTrend({ rows, rowsAnterior = [] }: SalesTrendProps) {
           <Area
             dataKey="netSales"
             type="monotone"
-            stroke="#8c6b3f"
-            strokeWidth={2.5}
+            stroke="#18181b"
+            strokeWidth={3}
+            dot={{ r: 5, fill: "#18181b", stroke: "#ffffff", strokeWidth: 2 }}
+            activeDot={{ r: 7, fill: "#18181b", stroke: "#ffffff", strokeWidth: 2 }}
             fill="url(#salesGradient)"
             name="Venda líquida"
           >
             <LabelList
               dataKey="netSales"
               position="top"
-              offset={10}
-              fontSize={11}
-              fill="#5d5346"
+              offset={12}
+              fontSize={13}
+              fontWeight={700}
+              fill="#111111"
               formatter={(value: number, _entry: unknown, index: number) =>
                 rotular(Number(value), index) ? formatMoneyCompact(Number(value)) : ""
               }
@@ -234,6 +246,118 @@ export function AbcRepresentativity({ data }: AbcRepresentativityProps) {
           <Bar dataKey="revenueShare" name="% da receita" fill="#b8935f" radius={[4, 4, 0, 0]} />
           <Bar dataKey="skuShare" name="% dos SKUs" fill="#1f4d47" radius={[4, 4, 0, 0]} />
         </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// Rampa ORDINAL de um tom so (verde da marca, escuro -> claro) mais um cinza neutro para
+// "Outros". As fatias saem ordenadas por tamanho, entao a escala e ordinal, nao identidade
+// categorica — rampa de uma cor e o certo aqui, e evita jogar um arco-iris numa interface
+// que acabou de ser neutralizada. Contraste contra o branco conferido na mao: o passo mais
+// claro (#6fa199) da 2,90:1 e o cinza da 2,65:1, acima do piso de 2:1 para rampa ordinal.
+const RAMPA_ROSCA = ["#14342f", "#1f4d47", "#3d7068", "#6fa199"];
+const COR_OUTROS = "#9e9ea8";
+
+type DonutShareProps = {
+  rows: { name: string; value: number }[];
+  /** Fatias reais antes de agrupar o resto em "Outros". Acima de 4 a leitura morre. */
+  maxFatias?: number;
+  /** Formatador do valor na legenda e no tooltip. */
+  formatar?: (valor: number) => string;
+};
+
+export function DonutShare({ rows, maxFatias = 4, formatar = formatMoney }: DonutShareProps) {
+  const ordenado = [...rows]
+    .filter((row) => Number(row.value || 0) > 0)
+    .sort((a, b) => b.value - a.value);
+  const total = ordenado.reduce((soma, row) => soma + row.value, 0);
+
+  const principais = ordenado.slice(0, maxFatias);
+  const resto = ordenado.slice(maxFatias);
+  const restoTotal = resto.reduce((soma, row) => soma + row.value, 0);
+
+  const data = [
+    ...principais.map((row, index) => ({ ...row, cor: RAMPA_ROSCA[index] || COR_OUTROS })),
+    ...(restoTotal > 0
+      ? [{ name: `Outros (${resto.length})`, value: restoTotal, cor: COR_OUTROS }]
+      : []),
+  ];
+
+  if (!total) return null;
+
+  return (
+    <div className="donutWrap">
+      <div className="donutChart">
+        <ResponsiveContainer width="100%" height={168}>
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={44}
+              outerRadius={74}
+              paddingAngle={2}
+              stroke="var(--surface)"
+              strokeWidth={2}
+            >
+              {data.map((fatia) => (
+                <Cell key={fatia.name} fill={fatia.cor} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(valor: number, nome: string) => [
+                `${formatar(valor)} · ${formatPercent(valor / total)}`,
+                nome,
+              ]}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Legenda com valor e percentual: a cor nunca carrega a identidade sozinha. */}
+      <ul className="donutLegend">
+        {data.map((fatia) => (
+          <li key={fatia.name}>
+            <span className="donutDot" style={{ background: fatia.cor }} />
+            <span className="donutName">{fatia.name}</span>
+            <span className="donutValue">{formatPercent(fatia.value / total)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function ParetoCurve({ points }: { points: { skuShare: number; cumulativeShare: number }[] }) {
+  return (
+    <div className="paretoChart">
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={points} margin={{ top: 18, right: 20, bottom: 12, left: 8 }}>
+          <CartesianGrid stroke="#d9dee3" vertical={false} />
+          <XAxis
+            dataKey="skuShare"
+            type="number"
+            domain={[0, 1]}
+            tickFormatter={(value) => formatPercent(Number(value), 0)}
+            tick={{ fill: "#18181b", fontSize: 13 }}
+            tickLine={false}
+          />
+          <YAxis
+            domain={[0, 1]}
+            tickFormatter={(value) => formatPercent(Number(value), 0)}
+            tick={{ fill: "#18181b", fontSize: 13 }}
+            tickLine={false}
+            width={48}
+          />
+          <ReferenceLine x={0.2} stroke="#8f4c47" strokeDasharray="5 4" />
+          <ReferenceLine y={0.8} stroke="#8f4c47" strokeDasharray="5 4" />
+          <Tooltip
+            formatter={(value) => [formatPercent(Number(value)), "Receita acumulada"]}
+            labelFormatter={(value) => `${formatPercent(Number(value))} dos produtos`}
+          />
+          <Line type="monotone" dataKey="cumulativeShare" stroke="#1f4d47" strokeWidth={3} dot={false} activeDot={{ r: 5 }} name="Receita acumulada" />
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );

@@ -133,10 +133,24 @@ export function demoResponse(path: string): unknown {
       ] };
     case "/api/reports/customers":
       return { rows: [
-        { code: "C001", name: "Cliente Exemplo A", purchaseCount: 12, value: 128000 * scale },
-        { code: "C002", name: "Cliente Exemplo B", purchaseCount: 9, value: 98000 * scale },
-        { code: "C003", name: "Cliente Exemplo C", purchaseCount: 8, value: 84000 * scale },
-        { code: "C004", name: "Cliente Exemplo D", purchaseCount: 6, value: 63000 * scale },
+        { customerId: 1, code: "C001", name: "Cliente Exemplo A", purchaseCount: 12, value: 128000 * scale, lastPurchaseAt: end, totalValue: 373000 * scale, cumulativeValue: 128000 * scale },
+        { customerId: 2, code: "C002", name: "Cliente Exemplo B", purchaseCount: 9, value: 98000 * scale, lastPurchaseAt: end, totalValue: 373000 * scale, cumulativeValue: 226000 * scale },
+        { customerId: 3, code: "C003", name: "Cliente Exemplo C", purchaseCount: 8, value: 84000 * scale, lastPurchaseAt: end, totalValue: 373000 * scale, cumulativeValue: 310000 * scale },
+        { customerId: 4, code: "C004", name: "Cliente Exemplo D", purchaseCount: 6, value: 63000 * scale, lastPurchaseAt: end, totalValue: 373000 * scale, cumulativeValue: 373000 * scale },
+      ] };
+    case "/api/reports/customer-sellers":
+      return { rows: [
+        { customerId: 1, sellerName: "Consultora A" },
+        { customerId: 2, sellerName: "Consultora B" },
+        { customerId: 3, sellerName: "Consultora C" },
+        { customerId: 4, sellerName: "Consultora D" },
+      ] };
+    case "/api/reports/customer-products":
+      return { rows: [
+        { customerId: 1, productName: "Anel Exemplo" },
+        { customerId: 2, productName: "Colar Exemplo" },
+        { customerId: 3, productName: "Brinco Exemplo" },
+        { customerId: 4, productName: "Pulseira Exemplo" },
       ] };
     case "/api/reports/stock-coverage":
       return { rows: stockCoverage };

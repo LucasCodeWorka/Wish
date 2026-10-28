@@ -1,16 +1,22 @@
-import { Gem, Layers, PackageSearch, ReceiptText, Store, TrendingDown, TrendingUp, Truck, Users, WalletCards } from "lucide-react";
+import { Gem, Layers, ReceiptText, TrendingDown, TrendingUp, Truck, Users, WalletCards } from "lucide-react";
 import { getChannelData, getConsignmentData, getSalesData, periodoDaUrl } from "../../lib/api";
 import {
   formatDateShort,
   formatDecimal,
   formatDelta,
   formatMoney,
+  formatMoneyCompact,
   formatNumber,
   formatPercent,
   formatRangeLabel,
   variacao,
 } from "../../lib/format";
-import { CategoryBars, SalesTrend } from "../../components/charts";
+import { CategoryBars, DonutShare, SalesTrend } from "../../components/charts";
+import { AnalyticTable } from "../../components/AnalyticTable";
+import { ChannelAnalysis } from "../../components/ChannelAnalysis";
+import { DrillCard } from "../../components/DrillCard";
+import { ProductTopList } from "../../components/ProductTopList";
+import { ProductAbcAnalysis } from "../../components/ProductAbcAnalysis";
 import { FilterBar } from "../../components/FilterBar";
 import {
   Chapter,
@@ -21,6 +27,12 @@ import {
   numeric,
   text,
 } from "../../components/ui";
+
+function classificarAbc(acumulado: number): "A" | "B" | "C" {
+  if (acumulado <= 0.8) return "A";
+  if (acumulado <= 0.95) return "B";
+  return "C";
+}
 
 export default async function VendasPage({
   searchParams,
@@ -49,7 +61,7 @@ export default async function VendasPage({
 
   if (!data) {
     return (
-      <main className="shell">
+      <main className="shell salesPage">
         <PageHeader
           eyebrow="Wish BI"
           title="Análise de vendas"
@@ -193,6 +205,7 @@ export default async function VendasPage({
       return {
         code: codigo,
         name: text(row, "name"),
+        valor: valorCanal,
         atendimentos: atendimentosCanal,
         tkm: tkmCanal,
         tkmAnterior: tkmAnt,
@@ -204,7 +217,7 @@ export default async function VendasPage({
         melhoresProdutos: (produtosPorCanal.get(codigo) || []).join(", ") || "—",
       };
     })
-    .sort((a, b) => b.atendimentos - a.atendimentos);
+    .sort((a, b) => b.valor - a.valor);
 
   // Consignacao: SCS tira do estoque proprio e poe na conta do consignatario; dali, DSC
   // devolve ou VCS vende (conta como venda, ja somada no faturamento liquido do topo).
@@ -230,6 +243,90 @@ export default async function VendasPage({
     return { ...row, date: formatDateShort(String(row.date || "")), clienteLabel };
   });
 
+  // Vitrine dos blocos: a rosca recebe nome/valor, e a frase destaca o lider com seu peso.
+  const canaisDonut = comparativoCanais.map((row) => ({ name: row.name, value: row.valor }));
+  const totalCanais = canaisDonut.reduce((soma, row) => soma + row.value, 0);
+  const canalLider = canaisDonut[0];
+  const fraseCanais = canalLider
+    ? `${canalLider.name} concentra ${formatPercent(canalLider.value / (totalCanais || 1))} do faturamento, em ${formatNumber(comparativoCanais.length)} canais ativos.`
+    : undefined;
+
+  const pagamentosDonut = data.paymentMethods.map((row) => ({
+    name: text(row, "name") === "-" ? text(row, "code") : text(row, "name"),
+    value: numeric(row, "value"),
+  }));
+  const totalPagamentos = pagamentosDonut.reduce((soma, row) => soma + row.value, 0);
+  const pagamentoLider = [...pagamentosDonut].sort((a, b) => b.value - a.value)[0];
+  const frasePagamentos = pagamentoLider
+    ? `${pagamentoLider.name} responde por ${formatPercent(pagamentoLider.value / (totalPagamentos || 1))} do recebido no período.`
+    : undefined;
+  const pagamentosDetalhe = data.paymentMethods.map((row) => ({
+    ...row,
+    participacao: totalPagamentos ? numeric(row, "value") / totalPagamentos : 0,
+  }));
+
+  const vendedorasPorCliente = new Map<number, string[]>();
+  data.customerSellers.forEach((row) => {
+    const id = numeric(row, "customerId");
+    const nome = text(row, "sellerName") === "-" ? text(row, "sellerCode") : text(row, "sellerName");
+    if (nome === "-") return;
+    const lista = vendedorasPorCliente.get(id) || [];
+    if (!lista.includes(nome)) lista.push(nome);
+    vendedorasPorCliente.set(id, lista);
+  });
+  const produtosPorCliente = new Map<number, string[]>();
+  data.customerProducts.forEach((row) => {
+    const id = numeric(row, "customerId");
+    const nome = text(row, "productName") === "-" ? text(row, "productCode") : text(row, "productName");
+    const lista = produtosPorCliente.get(id) || [];
+    if (nome !== "-" && !lista.includes(nome)) lista.push(nome);
+    produtosPorCliente.set(id, lista);
+  });
+  const clientes = data.customers.map((row, index) => {
+    const id = numeric(row, "customerId");
+    const total = numeric(row, "totalValue");
+    const acumulado = total ? numeric(row, "cumulativeValue") / total : 0;
+    return {
+      ...row,
+      rank: index + 1,
+      ultimaCompra: formatDateShort(String(row.lastPurchaseAt || "")),
+      vendedoras: (vendedorasPorCliente.get(id) || []).join(", ") || "Sem vendedora vinculada",
+      produtos: (produtosPorCliente.get(id) || []).join(" · ").toLocaleUpperCase("pt-BR") || "—",
+      participacao: total ? numeric(row, "value") / total : 0,
+      classe: classificarAbc(acumulado),
+    };
+  });
+
+  const produtosAbc = data.productAbc.map((row, index) => {
+    const total = Number(row.totalSales || 0);
+    const acumulado = total ? Number(row.cumulativeSales || 0) / total : 0;
+    return {
+      rank: index + 1,
+      code: String(row.code || ""),
+      name: String(row.name || row.code || "").toLocaleUpperCase("pt-BR"),
+      quantity: Number(row.quantity || 0),
+      grossSales: Number(row.grossSales || 0),
+      revenueShare: total ? Number(row.grossSales || 0) / total : 0,
+      cumulativeShare: acumulado,
+      classe: classificarAbc(acumulado),
+    };
+  });
+  const top10Produtos = produtosAbc.slice(0, 10);
+  const rotuloAbc = formatRangeLabel(data.productAbcPeriod.de, data.productAbcPeriod.ate);
+  const totalSkus = produtosAbc.length;
+  const top10Participacao = top10Produtos.reduce((soma, row) => soma + row.revenueShare, 0);
+  const qtdVintePorCento = Math.ceil(totalSkus * 0.2);
+  const participacaoVintePorCento = produtosAbc[qtdVintePorCento - 1]?.cumulativeShare || 0;
+  const indiceOitenta = produtosAbc.findIndex((row) => row.cumulativeShare >= 0.8);
+  const qtdParaOitenta = indiceOitenta < 0 ? 0 : indiceOitenta + 1;
+  const pontosPareto = totalSkus <= 100
+    ? [{ skuShare: 0, cumulativeShare: 0 }, ...produtosAbc.map((row) => ({ skuShare: row.rank / totalSkus, cumulativeShare: row.cumulativeShare }))]
+    : Array.from({ length: 101 }, (_, percentual) => {
+      if (percentual === 0) return { skuShare: 0, cumulativeShare: 0 };
+      const index = Math.min(totalSkus - 1, Math.ceil(totalSkus * percentual / 100) - 1);
+      return { skuShare: (index + 1) / totalSkus, cumulativeShare: produtosAbc[index].cumulativeShare };
+    });
+
   function VarCell({ value }: { value: number | null }) {
     if (value === null) return <span style={{ color: "var(--muted)" }}>novo</span>;
     const subiu = value > 0;
@@ -250,7 +347,7 @@ export default async function VendasPage({
   }
 
   return (
-    <main className="shell">
+    <main className="shell salesPage">
       <PageHeader
         eyebrow="Wish Fine Jewelry"
         title="Análise de vendas"
@@ -323,87 +420,78 @@ export default async function VendasPage({
         </article>
       </section>
 
-      {comparativoCanais.length > 0 && (
-        <section className="grid one">
-          <article className="panel wide">
-            <div className="panelHead">
-              <div>
-                <h2>Comparativo por canal</h2>
-                <p>
-                  As 14 &quot;empresas&quot; cadastradas não são lojas físicas — são canal de
-                  venda (loja principal, site, showroom, país, parceria, pessoa). Só entram
-                  canais com venda no período.
-                </p>
-              </div>
-              <Store size={18} />
-            </div>
-            <div className="tableWrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Canal</th>
-                    <th>Atendimentos</th>
-                    <th>TKM atual</th>
-                    <th>TKM ano anterior</th>
-                    <th>Var. TKM</th>
-                    <th>PA atual</th>
-                    <th>PA ano anterior</th>
-                    <th>Var. PA</th>
-                    <th>Estoque</th>
-                    <th>Melhores produtos</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparativoCanais.map((row) => (
-                    <tr key={row.code}>
-                      <td>
-                        <strong>{row.name}</strong>
-                        <div style={{ color: "var(--muted)", fontSize: 12 }}>{row.code}</div>
-                      </td>
-                      <td>{formatNumber(row.atendimentos)}</td>
-                      <td>{formatMoney(row.tkm)}</td>
-                      <td>{formatMoney(row.tkmAnterior)}</td>
-                      <td>
-                        <VarCell value={row.varTkm} />
-                      </td>
-                      <td>{formatDecimal(row.pa, 2)}</td>
-                      <td>{formatDecimal(row.paAnterior, 2)}</td>
-                      <td>
-                        <VarCell value={row.varPa} />
-                      </td>
-                      <td>{formatNumber(row.estoque)}</td>
-                      <td style={{ fontSize: 12 }}>{row.melhoresProdutos}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="panel note">
+      <section className="grid two summaryGrid">
+        {comparativoCanais.length > 0 && (
+          <DrillCard
+            titulo="Canais"
+            numero={formatMoneyCompact(totalCanais)}
+            numeroLegenda="Faturamento por canal"
+            frase={fraseCanais}
+            acao="Ver TKM, PA e estoque por canal"
+            resumo={<DonutShare rows={canaisDonut} maxFatias={3} />}
+          >
+            <p className="channelNote">
+              As 14 &quot;empresas&quot; cadastradas não são lojas físicas — são canal de
+              venda (loja principal, site, showroom, país, parceria, pessoa). Só entram
+              canais com venda no período.
+            </p>
+            <ChannelAnalysis rows={comparativoCanais} />
+            <p className="channelNote">
               TKM e PA do ano anterior comparam o mesmo canal no mesmo recorte de datas do
               ano passado. &quot;Estoque&quot; é a posição própria de hoje (grupo ESTOQUES),
               não do período. &quot;Melhores produtos&quot; são os 3 de maior valor vendido no
               canal, no período selecionado.
             </p>
-          </article>
-        </section>
-      )}
+          </DrillCard>
+        )}
 
-      <section className="grid three">
-        <article className="panel soft">
-          <div className="panelHead">
-            <div>
-              <h2>Top produtos</h2>
-              <p>Por valor vendido</p>
-            </div>
-            <PackageSearch size={18} />
-          </div>
-          <CategoryBars
-            rows={data.topProducts.map((row) => ({
-              name: text(row, "name"),
-              grossSales: numeric(row, "grossSales"),
-            }))}
+        <DrillCard
+          titulo="Mix de pagamento"
+          numero={formatMoneyCompact(totalPagamentos)}
+          numeroLegenda="Recebido por forma de pagamento"
+          frase={frasePagamentos}
+          acao="Ver formas e parcelas"
+          resumo={<DonutShare rows={pagamentosDonut} maxFatias={4} />}
+        >
+          <AnalyticTable
+            rows={pagamentosDetalhe}
+            initialSort="value"
+            filterLabel="Filtrar formas de pagamento"
+            columns={[
+              { key: "code", label: "Forma" },
+              { key: "name", label: "Descrição" },
+              { key: "installments", label: "Parcelas", type: "number" },
+              { key: "value", label: "Valor", type: "money" },
+              { key: "participacao", label: "Participação", type: "percent" },
+            ]}
           />
-        </article>
+        </DrillCard>
+      </section>
+
+      <section className="grid two">
+        <DrillCard
+          titulo="Top 10 produtos"
+          numero={formatPercent(top10Participacao)}
+          numeroLegenda={`da venda de produtos nos 12 meses fechados (${rotuloAbc})`}
+          frase={`${formatNumber(qtdParaOitenta)} de ${formatNumber(totalSkus)} produtos vendidos alcançam 80% da venda nos últimos 12 meses.`}
+          acao="Ver curva ABC e análise 80/20"
+          modalClassName="drillDialogWide"
+          resumo={<ProductTopList rows={top10Produtos} />}
+        >
+          <p className="paretoExplanation">Universo: somente produtos com venda positiva nos últimos 12 meses fechados ({rotuloAbc}). Produtos sem venda nesse intervalo ficam fora da curva.</p>
+          <div className="paretoStats">
+            <div><span>Top 20% dos produtos</span><strong>{formatPercent(participacaoVintePorCento)}</strong><small>da venda · {formatNumber(qtdVintePorCento)} produtos</small></div>
+            <div><span>Para alcançar 80% da venda</span><strong>{formatNumber(qtdParaOitenta)}</strong><small>produtos · {formatPercent(totalSkus ? qtdParaOitenta / totalSkus : 0)} dos SKUs</small></div>
+            <div><span>Top 10 produtos</span><strong>{formatPercent(top10Participacao)}</strong><small>da venda dos últimos 12 meses</small></div>
+          </div>
+          <p className="paretoExplanation">
+            Neste período, os 20% mais vendidos representam {formatPercent(participacaoVintePorCento)} da venda.
+            Para alcançar 80%, são necessários {formatPercent(totalSkus ? qtdParaOitenta / totalSkus : 0)} dos produtos.
+            A curva acumula a receita por ordem de valor, com referências em 20% dos produtos e 80% da receita.
+            As classes seguem os cortes de 80% (A), 95% (B) e o restante (C).
+          </p>
+          <ProductAbcAnalysis rows={produtosAbc} points={pontosPareto} />
+        </DrillCard>
 
         <article className="panel soft">
           <div className="panelHead">
@@ -424,24 +512,6 @@ export default async function VendasPage({
             registrada daquele produto. Produto sem compra registrada aparece como
             &quot;Fornecedor não identificado&quot;.
           </p>
-        </article>
-
-        <article className="panel soft">
-          <div className="panelHead">
-            <div>
-              <h2>Mix de pagamento</h2>
-              <p>Como o período foi recebido</p>
-            </div>
-            <WalletCards size={18} />
-          </div>
-          <RankingTable
-            rows={data.paymentMethods}
-            columns={[
-              { key: "code", label: "Forma" },
-              { key: "installments", label: "Parc.", type: "number" },
-              { key: "value", label: "Valor", type: "money" },
-            ]}
-          />
         </article>
       </section>
 
@@ -481,44 +551,53 @@ export default async function VendasPage({
           </p>
         </article>
 
-        <div className="stackColumn">
-          <article className="panel soft">
-            <div className="panelHead">
-              <div>
-                <h2>Participação</h2>
-                <p>Top 10 por valor atribuído</p>
-              </div>
+        <article className="panel soft">
+          <div className="panelHead">
+            <div>
+              <h2>Participação</h2>
+              <p>Top 10 por valor atribuído</p>
             </div>
-            <CategoryBars
-              rows={vendedoras.map((row) => ({
-                name: text(row, "name"),
-                grossSales: numeric(row, "movementValue"),
-              }))}
-            />
-          </article>
+          </div>
+          <CategoryBars
+            rows={vendedoras.map((row) => ({
+              name: text(row, "name"),
+              grossSales: numeric(row, "movementValue"),
+            }))}
+          />
+        </article>
+      </section>
 
-          <article className="panel soft">
-            <div className="panelHead">
-              <div>
-                <h2>Clientes</h2>
-                <p>
-                  {formatNumber(retention.activeCustomersPeriod)} ativos ·{" "}
-                  {formatNumber(retention.newCustomersPeriod)} novos ·{" "}
-                  {formatPercent(retornoClientes)} recorrentes
-                </p>
-              </div>
+      <section className="grid one">
+        <article className="panel wide customerPanel">
+          <div className="panelHead">
+            <div>
+              <h2>Clientes</h2>
+              <p>
+                {formatNumber(retention.activeCustomersPeriod)} ativos ·{" "}
+                {formatNumber(retention.newCustomersPeriod)} novos ·{" "}
+                {formatPercent(retornoClientes)} recorrentes. Ranking de todos os clientes do período.
+              </p>
             </div>
-            <RankingTable
-              rows={data.customers}
-              limit={8}
-              columns={[
-                { key: "name", label: "Cliente" },
-                { key: "purchaseCount", label: "Compras", type: "number" },
-                { key: "value", label: "Valor", type: "money" },
-              ]}
-            />
-          </article>
-        </div>
+          </div>
+          <p className="panel note">A participação e a classe ABC usam a venda de todos os clientes do período; A até 80%, B até 95%, C no restante. Produtos listados: os 3 de maior valor para cada cliente.</p>
+          <AnalyticTable
+            rows={clientes}
+            initialSort="value"
+            filterLabel="Buscar cliente, vendedora ou produto"
+            pageSize={50}
+            columns={[
+              { key: "rank", label: "#", type: "number" },
+              { key: "name", label: "Cliente", subKey: "code" },
+              { key: "purchaseCount", label: "Compras", type: "number" },
+              { key: "value", label: "Valor", type: "money" },
+              { key: "participacao", label: "% venda", type: "percent" },
+              { key: "classe", label: "ABC", type: "abc" },
+              { key: "ultimaCompra", label: "Última compra no período" },
+              { key: "vendedoras", label: "Vendedoras" },
+              { key: "produtos", label: "Produtos líderes" },
+            ]}
+          />
+        </article>
       </section>
 
       <Chapter
@@ -554,7 +633,7 @@ export default async function VendasPage({
                   <tr key={row.code}>
                     <td>
                       <strong>{row.code}</strong>
-                      <div style={{ color: "var(--muted)", fontSize: 12 }}>{row.name}</div>
+                      <div className="productDescription">{row.name}</div>
                     </td>
                     <td>{formatNumber(row.qtdAtual)}</td>
                     <td>{formatNumber(row.qtdAnterior)}</td>
@@ -598,7 +677,7 @@ export default async function VendasPage({
               }}
             >
               <span>
-                Em consignação hoje: <strong style={{ color: "var(--ink)" }}>{formatNumber(resumoConsignacao.estoqueAtualQty)}</strong> peças
+                Em consignação hoje: <strong style={{ color: "var(--ink)" }}>{formatNumber(resumoConsignacao.estoqueAtualQty)}</strong> peças ({formatMoney(resumoConsignacao.estoqueAtualValorCusto)} em custo)
               </span>
               <span>
                 Enviado no período: <strong style={{ color: "var(--ink)" }}>{formatNumber(resumoConsignacao.enviadoQty)}</strong> ({formatMoney(resumoConsignacao.enviadoValor)})
@@ -619,6 +698,7 @@ export default async function VendasPage({
                   columns={[
                     { key: "name", label: "Consignatário" },
                     { key: "estoqueAtual", label: "Com ele agora", type: "number" },
+                    { key: "estoqueAtualValorCusto", label: "Valor atual (custo)", type: "money" },
                     { key: "enviadoQty", label: "Enviado", type: "number" },
                     { key: "retornadoQty", label: "Devolvido", type: "number" },
                     { key: "vendidoQty", label: "Vendido", type: "number" },

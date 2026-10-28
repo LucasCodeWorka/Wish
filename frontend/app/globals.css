@@ -463,6 +463,401 @@ h1 {
   font-size: 14px;
 }
 
+/* Bloco da vitrine: resumo clicavel que abre o analitico em modal. */
+.drillCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.drillTrigger {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 18px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-height: 310px;
+}
+
+.drillTrigger:hover {
+  background: var(--line-soft);
+}
+
+.drillTrigger:focus-visible,
+.analyticSort:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: -3px;
+}
+
+.drillHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.drillHead h2 {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+.drillNumber {
+  color: var(--ink);
+  font-size: 28px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.drillNumber small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.drillResumo {
+  min-width: 0;
+}
+
+.drillFrase {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.drillAcao {
+  margin-top: auto;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.drillTrigger:hover .drillAcao {
+  text-decoration: underline;
+}
+
+/* Modal do analitico */
+.drillDialog {
+  width: min(1180px, 96vw);
+  max-height: 90vh;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.22);
+  overflow-y: auto;
+}
+
+.drillDialogWide {
+  width: min(1600px, 98vw);
+  max-width: 98vw;
+  max-height: 96vh;
+}
+
+.drillDialog::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.drillDialogInner {
+  padding: 26px;
+}
+
+.drillDialogHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.drillDialogHead h2 {
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.drillDialog .tableWrap {
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.channelNote {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.channelAnalysis {
+  min-width: 0;
+}
+
+.channelControls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 18px 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.channelControls label {
+  display: grid;
+  gap: 6px;
+}
+
+.channelControls input,
+.channelControls select {
+  min-width: 220px;
+  padding: 10px 12px;
+  border: 1px solid #aeb6bf;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.channelControls > span {
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.channelGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.channelItem {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #cbd2da;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.channelItemHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.channelItemHead h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.channelItemHead small,
+.channelRevenue span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.channelRevenue {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.channelRevenue strong {
+  color: var(--ink);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.channelFacts,
+.channelCompare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.channelFacts {
+  padding: 16px 0;
+}
+
+.channelFacts span,
+.channelCompare span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.channelFacts strong,
+.channelCompare strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.channelCompare {
+  padding: 14px;
+  border-radius: 8px;
+  background: #f1f3f5;
+}
+
+.channelCompare small {
+  display: block;
+  margin-top: 5px;
+  color: #333b45;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.channelProducts {
+  margin-top: 16px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.channelEmpty {
+  padding: 30px 0;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+/* Rosca: grafico a esquerda, legenda rotulada a direita. A cor nunca carrega a
+   identidade sozinha — cada fatia aparece com nome e percentual na legenda. */
+.donutWrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.donutChart {
+  flex: 0 0 150px;
+  min-width: 0;
+}
+
+.donutLegend {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.donutLegend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+
+.donutDot {
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.donutName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.donutValue {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.analyticToolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 14px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.analyticToolbar label {
+  display: grid;
+  gap: 5px;
+  min-width: min(310px, 70%);
+  font-weight: 600;
+}
+
+.analyticToolbar input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.analyticSort {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.analyticSort:hover {
+  color: var(--green);
+}
+
+.analyticSub {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.analyticMore {
+  display: block;
+  margin: 16px auto 4px;
+  padding: 10px 18px;
+  border: 1px solid var(--green);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--green);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.analyticMore:hover {
+  background: var(--line-soft);
+}
+
 /* Faixa de leitura do periodo */
 .insights {
   display: grid;
@@ -743,6 +1138,349 @@ tr:hover td {
   background: var(--line-soft);
 }
 
+/* Leitura da aba Vendas: maior contraste e tamanho sem alterar as outras abas. */
+.salesPage {
+  --muted: #3f4852;
+  --line: #d5d9de;
+}
+
+.salesPage .lede,
+.salesPage .chapter p,
+.salesPage .panelHead p,
+.salesPage .panel.note,
+.salesPage .insights p {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.salesPage .chapter h2 {
+  font-size: 21px;
+}
+
+.salesPage .panelHead h2,
+.salesPage .panel.soft .panelHead h2 {
+  font-size: 18px;
+}
+
+.salesPage .metric span {
+  font-size: 14px;
+}
+
+.salesPage .metric small,
+.salesPage .delta {
+  font-size: 14px;
+}
+
+.salesPage .drillHead h2 {
+  font-size: 19px;
+}
+
+.salesPage .drillNumber {
+  font-size: 32px;
+}
+
+.salesPage .drillNumber small,
+.salesPage .drillAcao,
+.salesPage .donutLegend li {
+  font-size: 14px;
+}
+
+.salesPage .drillFrase {
+  font-size: 15px;
+}
+
+.salesPage .panelSplitTitle {
+  font-size: 14px;
+}
+
+.salesPage table {
+  font-size: 14px;
+}
+
+.salesPage th {
+  color: #313942;
+  font-size: 12px;
+}
+
+.salesPage td {
+  line-height: 1.45;
+}
+
+.salesPage .summaryGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.summaryGrid .drillCard,
+.summaryGrid .drillTrigger {
+  height: 100%;
+}
+
+.productTopList {
+  display: grid;
+  gap: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.productTopRow {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 160px 110px;
+  align-items: center;
+  gap: 12px;
+  min-height: 47px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.productTopRank {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.productTopName {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.productTopName strong {
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.productTopName small {
+  margin-left: 7px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.productTopTrack {
+  display: block;
+  width: 100%;
+  height: 10px;
+  border-radius: 99px;
+  background: #e3e8e8;
+}
+
+.productTopTrack span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #1f4d47;
+}
+
+.productTopValue {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.productTopValue strong,
+.productTopValue small {
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.productTopValue small {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.paretoStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.paretoStats > div {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f5f6f7;
+}
+
+.paretoStats span,
+.paretoStats small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.paretoStats strong {
+  display: block;
+  margin: 5px 0;
+  color: var(--ink);
+  font-size: 25px;
+  font-variant-numeric: tabular-nums;
+}
+
+.paretoExplanation {
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.paretoTableTitle {
+  margin: 20px 0 6px;
+  color: var(--ink);
+  font-size: 19px;
+}
+
+.paretoChart {
+  width: 100%;
+  min-height: 300px;
+}
+
+.abcAnalysis {
+  margin-top: 24px;
+}
+
+.abcSectionHead {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.abcSectionHead h3 {
+  margin: 0 0 5px;
+  color: var(--ink);
+  font-size: 21px;
+}
+
+.abcSectionHead p {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.abcShowAll {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.abcShowAll[aria-pressed="true"] {
+  border-color: var(--green);
+  background: #e9f1ef;
+}
+
+.abcClassGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.abcClassCard {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 18px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.abcClassCard:hover,
+.abcClassCard.selected {
+  border-color: var(--green);
+  background: #f5f9f8;
+}
+
+.abcClassCard:focus-visible,
+.abcShowAll:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.abcClassHeading {
+  color: var(--green);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.abcClassShare {
+  display: block;
+  color: var(--ink);
+  font-size: 29px;
+  font-variant-numeric: tabular-nums;
+}
+
+.abcClassShare small {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.abcClassCount {
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.abcClassEdge {
+  display: grid;
+  gap: 3px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.abcClassEdge b {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.customerPanel .tableWrap {
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.customerPanel table {
+  min-width: 1100px;
+}
+
+.customerPanel td:nth-child(8),
+.customerPanel td:nth-child(9) {
+  max-width: 230px;
+  overflow-wrap: anywhere;
+}
+
+.customerPanel .analyticToolbar {
+  font-size: 14px;
+}
+
+.productDescription {
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
 @media (max-width: 1180px) {
   .metricsGrid,
   .grid.three {
@@ -753,6 +1491,10 @@ tr:hover td {
     grid-template-columns: 1fr;
   }
 
+  .salesPage .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
   /* Duas tabelas lado a lado so se paga em tela larga; abaixo disso, empilha. */
   .panelSplit {
     grid-template-columns: 1fr;
@@ -760,6 +1502,14 @@ tr:hover td {
 }
 
 @media (max-width: 900px) {
+  .abcClassGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .channelGrid {
+    grid-template-columns: 1fr;
+  }
+
   .appShell {
     flex-direction: column;
   }
@@ -792,6 +1542,46 @@ tr:hover td {
 }
 
 @media (max-width: 760px) {
+  .abcSectionHead {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .productTopRow {
+    grid-template-columns: 24px minmax(0, 1fr) 105px;
+    gap: 8px;
+  }
+
+  .productTopTrack {
+    display: none;
+  }
+
+  .paretoStats {
+    grid-template-columns: 1fr;
+  }
+
+  .drillDialogInner {
+    padding: 16px;
+  }
+
+  .channelItemHead {
+    flex-wrap: wrap;
+  }
+
+  .channelRevenue {
+    text-align: left;
+  }
+
+  .donutWrap {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .donutLegend {
+    width: 100%;
+  }
+
   .shell {
     padding: 18px;
   }
@@ -814,5 +1604,22 @@ tr:hover td {
   .panel,
   .metric {
     padding: 14px;
+  }
+}
+
+@media (max-width: 520px) {
+  .channelCompare {
+    grid-template-columns: 1fr;
+  }
+
+  .channelControls label,
+  .channelControls input,
+  .channelControls select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .channelControls > span {
+    margin-left: 0;
   }
 }

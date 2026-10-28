@@ -135,6 +135,20 @@ app.get(
 );
 
 app.get(
+  "/api/reports/customer-sellers",
+  asyncHandler(async (req, res) => {
+    res.json({ rows: await query(queries.customerSellers, rangeInputs(req)) });
+  }),
+);
+
+app.get(
+  "/api/reports/customer-products",
+  asyncHandler(async (req, res) => {
+    res.json({ rows: await query(queries.customerProducts, rangeInputs(req)) });
+  }),
+);
+
+app.get(
   "/api/reports/inventory",
   asyncHandler(async (_req, res) => {
     res.json({ rows: await query(queries.inventory) });

@@ -201,20 +201,72 @@ export const queries = {
   `,
 
   customers: `
-    SELECT TOP 30
-      RTRIM(c.codigo) AS code,
-      RTRIM(CONVERT(varchar(max), c.nomerazao)) AS name,
-      COUNT(DISTINCT m.id_movimentacao) AS purchaseCount,
-      SUM(m.valor) AS value,
-      MAX(m.data) AS lastPurchaseAt
+    WITH vendas AS (
+      SELECT m.rid_conta_destino AS customerId,
+        RTRIM(c.codigo) AS code,
+        RTRIM(CONVERT(varchar(max), c.nomerazao)) AS name,
+        COUNT(DISTINCT m.id_movimentacao) AS purchaseCount,
+        SUM(m.valor) AS value,
+        MAX(m.data) AS lastPurchaseAt
+      FROM Movimentacao m
+      JOIN Operacao o ON o.id_operacao = m.rid_operacao
+      JOIN Conta c ON c.id_conta = m.rid_conta_destino
+      WHERE RTRIM(o.codigo) IN ${salesOperationFilter}
+        AND m.data >= @startDate
+        AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
+      GROUP BY m.rid_conta_destino, RTRIM(c.codigo), RTRIM(CONVERT(varchar(max), c.nomerazao))
+    ), ranking AS (
+      SELECT *,
+        SUM(value) OVER () AS totalValue,
+        SUM(value) OVER (ORDER BY value DESC, customerId ROWS UNBOUNDED PRECEDING) AS cumulativeValue
+      FROM vendas
+    )
+    SELECT customerId, code, name, purchaseCount, value, lastPurchaseAt,
+      totalValue, cumulativeValue
+    FROM ranking
+    ORDER BY value DESC, customerId
+  `,
+
+  customerSellers: `
+    SELECT m.rid_conta_destino AS customerId,
+      RTRIM(c.codigo) AS sellerCode,
+      RTRIM(CONVERT(varchar(max), c.nomerazao)) AS sellerName,
+      COUNT(DISTINCT m.id_movimentacao) AS saleCount
     FROM Movimentacao m
     JOIN Operacao o ON o.id_operacao = m.rid_operacao
-    LEFT JOIN Conta c ON c.id_conta = m.rid_conta_destino
+    JOIN MovimentacaoVendedor mv ON mv.id_movimentacaovendedor = m.id_movimentacao
+    LEFT JOIN Conta c ON c.id_conta = mv.rid_conta_vendedor
     WHERE RTRIM(o.codigo) IN ${salesOperationFilter}
       AND m.data >= @startDate
       AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
-    GROUP BY RTRIM(c.codigo), RTRIM(CONVERT(varchar(max), c.nomerazao))
-    ORDER BY value DESC
+      AND m.rid_conta_destino IS NOT NULL
+    GROUP BY m.rid_conta_destino, RTRIM(c.codigo), RTRIM(CONVERT(varchar(max), c.nomerazao))
+    ORDER BY customerId, saleCount DESC
+  `,
+
+  customerProducts: `
+    WITH produtos AS (
+      SELECT m.rid_conta_destino AS customerId,
+        RTRIM(pr.codigo) AS productCode,
+        RTRIM(pr.descricao) AS productName,
+        SUM(mp.quantidade * mp.unitario) AS grossSales
+      FROM Movimentacao m
+      JOIN Operacao o ON o.id_operacao = m.rid_operacao
+      JOIN MovimentacaoProduto mp ON mp.id_movimentacaoproduto = m.id_movimentacao
+      LEFT JOIN Produto pr ON pr.id_produto = mp.rid_produto
+      WHERE RTRIM(o.codigo) IN ${salesOperationFilter}
+        AND m.data >= @startDate
+        AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
+        AND m.rid_conta_destino IS NOT NULL
+      GROUP BY m.rid_conta_destino, RTRIM(pr.codigo), RTRIM(pr.descricao)
+    ), ranking AS (
+      SELECT *, ROW_NUMBER() OVER (PARTITION BY customerId ORDER BY grossSales DESC, productCode) AS rn
+      FROM produtos
+    )
+    SELECT customerId, productCode, productName, grossSales
+    FROM ranking
+    WHERE rn <= 3
+    ORDER BY customerId, rn
   `,
 
   inventory: `
@@ -402,9 +454,11 @@ export const queries = {
         AND m.data >= @startDate AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
     ),
     estoqueAtual AS (
-      SELECT SUM(e.quantidade) AS qty
+      SELECT SUM(e.quantidade) AS qty,
+        SUM(e.quantidade * ISNULL(p.valordecusto, 0)) AS valorCusto
       FROM Estoque e
       LEFT JOIN GrupoDeConta g ON g.id_grupodeconta = e.rid_grupodeconta
+      LEFT JOIN Produto p ON p.id_produto = e.rid_produto
       WHERE RTRIM(g.descricao) = 'CONTAS DE CLIENTES'
     )
     SELECT
@@ -414,7 +468,8 @@ export const queries = {
       ISNULL((SELECT valor FROM retornado), 0) AS retornadoValor,
       ISNULL((SELECT qty FROM vendido), 0) AS vendidoQty,
       ISNULL((SELECT valor FROM vendido), 0) AS vendidoValor,
-      ISNULL((SELECT qty FROM estoqueAtual), 0) AS estoqueAtualQty
+      ISNULL((SELECT qty FROM estoqueAtual), 0) AS estoqueAtualQty,
+      ISNULL((SELECT valorCusto FROM estoqueAtual), 0) AS estoqueAtualValorCusto
   `,
 
   // Por consignatario: quanto recebeu, quanto devolveu, quanto vendeu (como origem do VCS)
@@ -451,9 +506,12 @@ export const queries = {
       GROUP BY m.rid_conta_origem
     ),
     estoqueAtual AS (
-      SELECT e.rid_conta AS clienteId, SUM(e.quantidade) AS qty
+      SELECT e.rid_conta AS clienteId,
+        SUM(e.quantidade) AS qty,
+        SUM(e.quantidade * ISNULL(p.valordecusto, 0)) AS valorCusto
       FROM Estoque e
       LEFT JOIN GrupoDeConta g ON g.id_grupodeconta = e.rid_grupodeconta
+      LEFT JOIN Produto p ON p.id_produto = e.rid_produto
       WHERE RTRIM(g.descricao) = 'CONTAS DE CLIENTES'
       GROUP BY e.rid_conta
     )
@@ -461,6 +519,7 @@ export const queries = {
       RTRIM(c.codigo) AS code,
       RTRIM(CONVERT(varchar(max), c.nomerazao)) AS name,
       ISNULL(ea.qty, 0) AS estoqueAtual,
+      ISNULL(ea.valorCusto, 0) AS estoqueAtualValorCusto,
       ISNULL(en.qty, 0) AS enviadoQty,
       ISNULL(en.valor, 0) AS enviadoValor,
       ISNULL(re.qty, 0) AS retornadoQty,
