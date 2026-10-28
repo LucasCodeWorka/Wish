@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, ChevronLeft, ChevronRight, Gem, LineChart, Repeat } from "lucide-react";
+import { Boxes, ChevronLeft, ChevronRight, Gem, LineChart, Repeat, Store } from "lucide-react";
 
 // "Resumo executivo" foi descontinuado: acabou duplicando quase tudo que ja existe em
 // Vendas (mesmos KPIs, mesmo grafico mensal, mesma participacao por vendedora). A unica
@@ -34,6 +34,12 @@ const NAV_ITEMS = [
     label: "Consignação",
     description: "Ciclo e consignatários",
     icon: Repeat,
+  },
+  {
+    href: "/canais",
+    label: "Canais",
+    description: "TKM e PA por canal de venda",
+    icon: Store,
   },
 ];
 

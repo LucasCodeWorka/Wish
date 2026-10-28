@@ -93,6 +93,27 @@ app.get(
 );
 
 app.get(
+  "/api/reports/channel-kpis",
+  asyncHandler(async (req, res) => {
+    res.json({ rows: await query(queries.channelKpis, rangeInputs(req)) });
+  }),
+);
+
+app.get(
+  "/api/reports/channel-stock",
+  asyncHandler(async (_req, res) => {
+    res.json({ rows: await query(queries.channelStock) });
+  }),
+);
+
+app.get(
+  "/api/reports/channel-top-products",
+  asyncHandler(async (req, res) => {
+    res.json({ rows: await query(queries.channelTopProducts, rangeInputs(req)) });
+  }),
+);
+
+app.get(
   "/api/reports/salespeople",
   asyncHandler(async (req, res) => {
     res.json({ rows: await query(queries.salespeople, rangeInputs(req)) });

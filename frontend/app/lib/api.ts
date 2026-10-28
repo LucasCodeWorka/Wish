@@ -304,3 +304,26 @@ export async function getConsignmentData(periodo: Periodo) {
     sales: sales.rows,
   };
 }
+
+export async function getChannelData(periodo: Periodo) {
+  const query = qs(periodo);
+  const queryAnterior = qs(periodoAnterior(periodo));
+
+  const [health, kpis, kpisAnterior, stock, topProducts] = await Promise.all([
+    getHealth(),
+    getJson<{ rows: RankingRow[] }>(`/api/reports/channel-kpis${query}`),
+    getJson<{ rows: RankingRow[] }>(`/api/reports/channel-kpis${queryAnterior}`),
+    getJson<{ rows: RankingRow[] }>("/api/reports/channel-stock"),
+    getJson<{ rows: RankingRow[] }>(`/api/reports/channel-top-products${query}`),
+  ]);
+
+  return {
+    health,
+    periodo,
+    periodoAnterior: periodoAnterior(periodo),
+    kpis: kpis.rows,
+    kpisAnterior: kpisAnterior.rows,
+    stock: stock.rows,
+    topProducts: topProducts.rows,
+  };
+}

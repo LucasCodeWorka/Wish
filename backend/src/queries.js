@@ -499,4 +499,61 @@ export const queries = {
       AND m.data >= @startDate AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
     ORDER BY m.data DESC
   `,
+
+  // As 14 "empresas" nao sao lojas fisicas — sao canal de venda (loja principal, site,
+  // showroom, pais, parceria, pessoa). TKM/PA variam MUITO entre elas (ex.: um canal com 6
+  // vendas e ticket medio de US$ 312 mil, claramente atacado, misturado com a loja normal).
+  channelKpis: `
+    SELECT
+      RTRIM(e.codigo) AS code,
+      RTRIM(e.identificacao) AS name,
+      COUNT(DISTINCT m.id_movimentacao) AS saleCount,
+      SUM(mp.quantidade * mp.unitario) AS grossSales,
+      SUM(mp.quantidade) AS unitsSold
+    FROM Movimentacao m
+    JOIN Operacao o ON o.id_operacao = m.rid_operacao
+    JOIN MovimentacaoProduto mp ON mp.id_movimentacaoproduto = m.id_movimentacao
+    LEFT JOIN Empresa e ON e.id_empresa = m.rid_empresa
+    WHERE RTRIM(o.codigo) IN ${salesOperationFilter}
+      AND m.data >= @startDate AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
+    GROUP BY RTRIM(e.codigo), RTRIM(e.identificacao)
+    ORDER BY grossSales DESC
+  `,
+
+  // Estoque proprio (grupo ESTOQUES) por empresa — posicao de hoje, sem filtro de periodo.
+  channelStock: `
+    SELECT RTRIM(e.codigo) AS code, SUM(es.quantidade) AS stockQty
+    FROM Estoque es
+    LEFT JOIN Empresa e ON e.id_empresa = es.rid_empresa
+    LEFT JOIN GrupoDeConta g ON g.id_grupodeconta = es.rid_grupodeconta
+    WHERE RTRIM(g.descricao) = 'ESTOQUES'
+    GROUP BY RTRIM(e.codigo)
+  `,
+
+  // Top 3 produtos por valor vendido, dentro de cada empresa/canal, no periodo selecionado.
+  channelTopProducts: `
+    WITH porProduto AS (
+      SELECT
+        e.id_empresa AS empresaId,
+        RTRIM(e.codigo) AS empresaCode,
+        RTRIM(p.codigo) AS code,
+        SUM(mp.quantidade * mp.unitario) AS valor
+      FROM Movimentacao m
+      JOIN Operacao o ON o.id_operacao = m.rid_operacao
+      JOIN MovimentacaoProduto mp ON mp.id_movimentacaoproduto = m.id_movimentacao
+      LEFT JOIN Empresa e ON e.id_empresa = m.rid_empresa
+      LEFT JOIN Produto p ON p.id_produto = mp.rid_produto
+      WHERE RTRIM(o.codigo) IN ${salesOperationFilter}
+        AND m.data >= @startDate AND (@endDate IS NULL OR m.data < DATEADD(day, 1, @endDate))
+      GROUP BY e.id_empresa, RTRIM(e.codigo), p.id_produto, RTRIM(p.codigo)
+    ),
+    ranqueado AS (
+      SELECT *, ROW_NUMBER() OVER (PARTITION BY empresaId ORDER BY valor DESC) AS rn
+      FROM porProduto
+    )
+    SELECT empresaCode, code, valor
+    FROM ranqueado
+    WHERE rn <= 3
+    ORDER BY empresaCode, rn
+  `,
 };
