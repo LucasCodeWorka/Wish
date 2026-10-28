@@ -1,6 +1,7 @@
 import { Gem, Layers, PackageSearch, ReceiptText, Store, TrendingDown, TrendingUp, Truck, Users, WalletCards } from "lucide-react";
-import { getChannelData, getSalesData, periodoDaUrl } from "../../lib/api";
+import { getChannelData, getConsignmentData, getSalesData, periodoDaUrl } from "../../lib/api";
 import {
+  formatDateShort,
   formatDecimal,
   formatDelta,
   formatMoney,
@@ -26,9 +27,14 @@ export default async function VendasPage({
   let error: string | null = null;
 
   let canais: Awaited<ReturnType<typeof getChannelData>> | null = null;
+  let consignacao: Awaited<ReturnType<typeof getConsignmentData>> | null = null;
 
   try {
-    [data, canais] = await Promise.all([getSalesData(periodo), getChannelData(periodo)]);
+    [data, canais, consignacao] = await Promise.all([
+      getSalesData(periodo),
+      getChannelData(periodo),
+      getConsignmentData(periodo),
+    ]);
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Falha ao carregar dados";
   }
@@ -191,6 +197,30 @@ export default async function VendasPage({
       };
     })
     .sort((a, b) => b.atendimentos - a.atendimentos);
+
+  // Consignacao: SCS tira do estoque proprio e poe na conta do consignatario; dali, DSC
+  // devolve ou VCS vende (conta como venda, ja somada no faturamento liquido do topo).
+  const resumoConsignacao = consignacao?.summary;
+  const decididas = resumoConsignacao
+    ? resumoConsignacao.vendidoQty + resumoConsignacao.retornadoQty
+    : 0;
+  const taxaConversao = decididas && resumoConsignacao ? resumoConsignacao.vendidoQty / decididas : 0;
+  const porConsignatario = (consignacao?.byReseller || []).map((row) => {
+    const vendido = numeric(row, "vendidoQty");
+    const retornado = numeric(row, "retornadoQty");
+    const decididasRow = vendido + retornado;
+    return { ...row, taxaConversao: decididasRow ? vendido / decididasRow : null };
+  });
+  const vendasConsignacao = (consignacao?.sales || []).map((row) => {
+    const consignatario = text(row, "resellerName");
+    const compradorCode = text(row, "buyerCode");
+    const consignatarioCode = text(row, "resellerCode");
+    const clienteLabel =
+      compradorCode && compradorCode !== consignatarioCode
+        ? `${consignatario} → ${text(row, "buyerName")}`
+        : consignatario;
+    return { ...row, date: formatDateShort(String(row.date || "")), clienteLabel };
+  });
 
   function VarCell({ value }: { value: number | null }) {
     if (value === null) return <span style={{ color: "var(--muted)" }}>novo</span>;
@@ -466,6 +496,77 @@ export default async function VendasPage({
               não do período. &quot;Melhores produtos&quot; são os 3 de maior valor vendido no
               canal, no período selecionado.
             </p>
+          </article>
+        </section>
+      )}
+
+      {resumoConsignacao && (
+        <section className="grid one">
+          <article className="panel wide">
+            <div className="panelHead">
+              <div>
+                <h2>Consignação</h2>
+                <p>
+                  Ciclo confirmado com a Wish: SCS tira do estoque próprio e põe na conta do
+                  consignatário; dali, DSC devolve ou VCS vende (já somada no faturamento
+                  líquido do topo da página).
+                </p>
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 16,
+                marginBottom: 14,
+                fontSize: 13,
+                color: "var(--muted)",
+              }}
+            >
+              <span>
+                Em consignação hoje: <strong style={{ color: "var(--ink)" }}>{formatNumber(resumoConsignacao.estoqueAtualQty)}</strong> peças
+              </span>
+              <span>
+                Enviado no período: <strong style={{ color: "var(--ink)" }}>{formatNumber(resumoConsignacao.enviadoQty)}</strong> ({formatMoney(resumoConsignacao.enviadoValor)})
+              </span>
+              <span>
+                Vendido no período: <strong style={{ color: "var(--ink)" }}>{formatNumber(resumoConsignacao.vendidoQty)}</strong> ({formatMoney(resumoConsignacao.vendidoValor)})
+              </span>
+              <span>
+                Taxa de conversão: <strong style={{ color: "var(--ink)" }}>{formatPercent(taxaConversao)}</strong>
+              </span>
+            </div>
+            <RankingTable
+              rows={porConsignatario}
+              limit={15}
+              columns={[
+                { key: "code", label: "Código" },
+                { key: "name", label: "Consignatário" },
+                { key: "estoqueAtual", label: "Com ele agora", type: "number" },
+                { key: "enviadoQty", label: "Enviado (qtd)", type: "number" },
+                { key: "retornadoQty", label: "Devolvido (qtd)", type: "number" },
+                { key: "vendidoQty", label: "Vendido (qtd)", type: "number" },
+                { key: "vendidoValor", label: "Vendido (valor)", type: "money" },
+              ]}
+            />
+            <p className="panel note">
+              As vendas de consignação (VCS) consultadas nunca mostram um comprador final
+              diferente do consignatário no sistema — origem e destino do movimento vêm
+              sempre a mesma conta. Pergunta em aberto para a Wish: esse dado existe em
+              algum outro lugar do ERP?
+            </p>
+            {vendasConsignacao.length > 0 && (
+              <RankingTable
+                rows={vendasConsignacao}
+                limit={10}
+                columns={[
+                  { key: "date", label: "Data" },
+                  { key: "productCode", label: "Produto" },
+                  { key: "clienteLabel", label: "Cliente" },
+                  { key: "value", label: "Valor", type: "money" },
+                ]}
+              />
+            )}
           </article>
         </section>
       )}
