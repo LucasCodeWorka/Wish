@@ -8,7 +8,9 @@ import { queries } from "./queries.js";
 dotenv.config();
 
 const app = express();
-const port = Number(process.env.BACKEND_PORT || 4000);
+// Render (e a maioria dos PaaS) injeta PORT e exige que o processo escute nela; o app nao
+// escolhe a propria porta em producao. BACKEND_PORT so vale localmente, quando PORT nao existe.
+const port = Number(process.env.PORT || process.env.BACKEND_PORT || 4000);
 
 app.use(cors());
 app.use(express.json());
