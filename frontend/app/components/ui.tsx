@@ -96,6 +96,32 @@ export function Metric({
   );
 }
 
+// Divisor narrativo. Sem ele a pagina vira uma pilha de cards de peso igual, onde o
+// faturamento do periodo e a tabela de formas de pagamento disputam a mesma atencao.
+// Cada capitulo declara a PERGUNTA que as secoes abaixo dele respondem.
+export function Chapter({
+  numero,
+  titulo,
+  pergunta,
+  alerta,
+}: {
+  numero: number;
+  titulo: string;
+  pergunta: string;
+  /** Capitulo que pede decisao, nao so leitura — ganha marcador de atencao. */
+  alerta?: boolean;
+}) {
+  return (
+    <div className={`chapter${alerta ? " alerta" : ""}`}>
+      <span className="chapterNum">{numero}</span>
+      <div>
+        <h2>{titulo}</h2>
+        <p>{pergunta}</p>
+      </div>
+    </div>
+  );
+}
+
 // Faixa de leitura: duas ou tres frases que dizem o que os numeros querem dizer. E o que
 // separa um painel de dados de um painel de decisao.
 export function Insights({ itens }: { itens: string[] }) {

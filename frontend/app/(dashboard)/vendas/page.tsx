@@ -12,7 +12,15 @@ import {
 } from "../../lib/format";
 import { CategoryBars, SalesTrend } from "../../components/charts";
 import { FilterBar } from "../../components/FilterBar";
-import { Insights, Metric, PageHeader, RankingTable, numeric, text } from "../../components/ui";
+import {
+  Chapter,
+  Insights,
+  Metric,
+  PageHeader,
+  RankingTable,
+  numeric,
+  text,
+} from "../../components/ui";
 
 export default async function VendasPage({
   searchParams,
@@ -254,6 +262,12 @@ export default async function VendasPage({
         )}
       </PageHeader>
 
+      <Chapter
+        numero={1}
+        titulo="Como foi o período"
+        pergunta="Vendemos melhor ou pior que no mesmo período do ano passado?"
+      />
+
       <section className="metricsGrid">
         <Metric
           label="Faturamento líquido"
@@ -291,6 +305,12 @@ export default async function VendasPage({
 
       <Insights itens={leitura} />
 
+      <Chapter
+        numero={2}
+        titulo="De onde veio o movimento"
+        pergunta="Qual mês, qual canal e quais produtos explicam esse resultado?"
+      />
+
       <section className="grid one">
         <article className="panel wide">
           <div className="panelHead">
@@ -300,138 +320,6 @@ export default async function VendasPage({
             </div>
           </div>
           <SalesTrend rows={data.monthlySales} rowsAnterior={anterior.monthlySales} />
-        </article>
-      </section>
-
-      <section className="grid three">
-        <article className="panel">
-          <div className="panelHead">
-            <div>
-              <h2>Top vendedoras</h2>
-              <p>Por valor atribuído</p>
-            </div>
-            <Users size={18} />
-          </div>
-          <CategoryBars
-            rows={vendedoras.map((row) => ({
-              name: text(row, "name"),
-              grossSales: numeric(row, "movementValue"),
-            }))}
-          />
-        </article>
-
-        <article className="panel">
-          <div className="panelHead">
-            <div>
-              <h2>Top fornecedores</h2>
-              <p>Por valor vendido</p>
-            </div>
-            <Truck size={18} />
-          </div>
-          <CategoryBars
-            rows={data.topSuppliers.map((row) => ({
-              name: text(row, "name"),
-              grossSales: numeric(row, "grossSales"),
-            }))}
-          />
-          <p className="panel note">
-            Fornecedor não é um cadastro do produto — é inferido pela última compra (COM)
-            registrada daquele produto. Produto sem compra registrada aparece como
-            &quot;Fornecedor não identificado&quot;.
-          </p>
-        </article>
-
-        <article className="panel">
-          <div className="panelHead">
-            <div>
-              <h2>Top produtos</h2>
-              <p>Por valor vendido</p>
-            </div>
-            <PackageSearch size={18} />
-          </div>
-          <CategoryBars
-            rows={data.topProducts.map((row) => ({
-              name: text(row, "name"),
-              grossSales: numeric(row, "grossSales"),
-            }))}
-          />
-        </article>
-      </section>
-
-      <section className="grid one">
-        <article className="panel wide">
-          <div className="panelHead">
-            <div>
-              <h2>Vendedoras</h2>
-              <p>Desempenho, ticket e comissão por vendedora</p>
-            </div>
-            <Users size={18} />
-          </div>
-          <RankingTable
-            rows={vendedoras}
-            limit={15}
-            columns={[
-              { key: "code", label: "Cód." },
-              { key: "name", label: "Nome" },
-              { key: "saleCount", label: "Vendas", type: "number" },
-              { key: "movementValue", label: "Valor", type: "money" },
-              { key: "ticketMedio", label: "Ticket médio", type: "money" },
-              { key: "commission", label: "Comissão", type: "money" },
-              { key: "comissaoPct", label: "Com. %", type: "percent" },
-              { key: "participacao", label: "Participação", type: "percent" },
-            ]}
-          />
-          <p className="panel note">
-            Participação calculada sobre o total atribuído a vendedoras no período; um
-            movimento pode ter mais de uma vendedora, então a soma pode superar a venda
-            líquida da empresa.
-          </p>
-        </article>
-      </section>
-
-      <section className="grid one">
-        <article className="panel wide">
-          <div className="panelHead">
-            <div>
-              <h2>Comparativo de produtos</h2>
-              <p>Top 20 do período atual, pareado por código com {rotuloAnterior.replace("vs. ", "")}</p>
-            </div>
-          </div>
-          <div className="tableWrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Produto</th>
-                  <th>Qtd. atual</th>
-                  <th>Qtd. anterior</th>
-                  <th>Var. qtd.</th>
-                  <th>Valor atual</th>
-                  <th>Valor anterior</th>
-                  <th>Var. valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comparativoProdutos.map((row) => (
-                  <tr key={row.code}>
-                    <td>
-                      <strong>{row.code}</strong>
-                      <div style={{ color: "var(--muted)", fontSize: 12 }}>{row.name}</div>
-                    </td>
-                    <td>{formatNumber(row.qtdAtual)}</td>
-                    <td>{formatNumber(row.qtdAnterior)}</td>
-                    <td>
-                      <VarCell value={row.varQtd} />
-                    </td>
-                    <td>{formatMoney(row.valorAtual)}</td>
-                    <td>{formatMoney(row.valorAnterior)}</td>
-                    <td>
-                      <VarCell value={row.varValor} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </article>
       </section>
 
@@ -499,6 +387,193 @@ export default async function VendasPage({
           </article>
         </section>
       )}
+
+      <section className="grid three">
+        <article className="panel soft">
+          <div className="panelHead">
+            <div>
+              <h2>Top produtos</h2>
+              <p>Por valor vendido</p>
+            </div>
+            <PackageSearch size={18} />
+          </div>
+          <CategoryBars
+            rows={data.topProducts.map((row) => ({
+              name: text(row, "name"),
+              grossSales: numeric(row, "grossSales"),
+            }))}
+          />
+        </article>
+
+        <article className="panel soft">
+          <div className="panelHead">
+            <div>
+              <h2>Top fornecedores</h2>
+              <p>Por valor vendido</p>
+            </div>
+            <Truck size={18} />
+          </div>
+          <CategoryBars
+            rows={data.topSuppliers.map((row) => ({
+              name: text(row, "name"),
+              grossSales: numeric(row, "grossSales"),
+            }))}
+          />
+          <p className="panel note">
+            Fornecedor não é um cadastro do produto — é inferido pela última compra (COM)
+            registrada daquele produto. Produto sem compra registrada aparece como
+            &quot;Fornecedor não identificado&quot;.
+          </p>
+        </article>
+
+        <article className="panel soft">
+          <div className="panelHead">
+            <div>
+              <h2>Mix de pagamento</h2>
+              <p>Como o período foi recebido</p>
+            </div>
+            <WalletCards size={18} />
+          </div>
+          <RankingTable
+            rows={data.paymentMethods}
+            columns={[
+              { key: "code", label: "Forma" },
+              { key: "installments", label: "Parc.", type: "number" },
+              { key: "value", label: "Valor", type: "money" },
+            ]}
+          />
+        </article>
+      </section>
+
+      <Chapter
+        numero={3}
+        titulo="Quem fez acontecer"
+        pergunta="Quais vendedoras entregaram o resultado e quais clientes compraram?"
+      />
+
+      <section className="grid two">
+        <article className="panel wide">
+          <div className="panelHead">
+            <div>
+              <h2>Vendedoras</h2>
+              <p>Desempenho, ticket e comissão por vendedora</p>
+            </div>
+            <Users size={18} />
+          </div>
+          <RankingTable
+            rows={vendedoras}
+            limit={15}
+            columns={[
+              { key: "code", label: "Cód." },
+              { key: "name", label: "Nome" },
+              { key: "saleCount", label: "Vendas", type: "number" },
+              { key: "movementValue", label: "Valor", type: "money" },
+              { key: "ticketMedio", label: "Ticket médio", type: "money" },
+              { key: "commission", label: "Comissão", type: "money" },
+              { key: "comissaoPct", label: "Com. %", type: "percent" },
+              { key: "participacao", label: "Participação", type: "percent" },
+            ]}
+          />
+          <p className="panel note">
+            Participação calculada sobre o total atribuído a vendedoras no período; um
+            movimento pode ter mais de uma vendedora, então a soma pode superar a venda
+            líquida da empresa.
+          </p>
+        </article>
+
+        <article className="panel soft">
+          <div className="panelHead">
+            <div>
+              <h2>Participação</h2>
+              <p>Top 10 por valor atribuído</p>
+            </div>
+          </div>
+          <CategoryBars
+            rows={vendedoras.map((row) => ({
+              name: text(row, "name"),
+              grossSales: numeric(row, "movementValue"),
+            }))}
+          />
+        </article>
+      </section>
+
+      <section className="grid one">
+        <article className="panel">
+          <div className="panelHead">
+            <div>
+              <h2>Clientes</h2>
+              <p>
+                {formatNumber(retention.activeCustomersPeriod)} ativos no período ·{" "}
+                {formatNumber(retention.newCustomersPeriod)} novos ·{" "}
+                {formatNumber(retention.returningCustomersPeriod)} recorrentes (
+                {formatPercent(retornoClientes)})
+              </p>
+            </div>
+          </div>
+          <RankingTable
+            rows={data.customers}
+            columns={[
+              { key: "code", label: "Código" },
+              { key: "name", label: "Cliente" },
+              { key: "purchaseCount", label: "Compras", type: "number" },
+              { key: "value", label: "Valor", type: "money" },
+            ]}
+          />
+        </article>
+      </section>
+
+      <Chapter
+        numero={4}
+        titulo="O que precisa de atenção"
+        pergunta="Onde o resultado caiu e o que está parado esperando decisão?"
+        alerta
+      />
+
+      <section className="grid one">
+        <article className="panel wide">
+          <div className="panelHead">
+            <div>
+              <h2>Comparativo de produtos</h2>
+              <p>Top 20 do período atual, pareado por código com {rotuloAnterior.replace("vs. ", "")}</p>
+            </div>
+          </div>
+          <div className="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Qtd. atual</th>
+                  <th>Qtd. anterior</th>
+                  <th>Var. qtd.</th>
+                  <th>Valor atual</th>
+                  <th>Valor anterior</th>
+                  <th>Var. valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparativoProdutos.map((row) => (
+                  <tr key={row.code}>
+                    <td>
+                      <strong>{row.code}</strong>
+                      <div style={{ color: "var(--muted)", fontSize: 12 }}>{row.name}</div>
+                    </td>
+                    <td>{formatNumber(row.qtdAtual)}</td>
+                    <td>{formatNumber(row.qtdAnterior)}</td>
+                    <td>
+                      <VarCell value={row.varQtd} />
+                    </td>
+                    <td>{formatMoney(row.valorAtual)}</td>
+                    <td>{formatMoney(row.valorAnterior)}</td>
+                    <td>
+                      <VarCell value={row.varValor} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
 
       {resumoConsignacao && (
         <section className="grid one">
@@ -570,49 +645,6 @@ export default async function VendasPage({
           </article>
         </section>
       )}
-
-      <section className="grid two">
-        <article className="panel">
-          <div className="panelHead">
-            <div>
-              <h2>Clientes</h2>
-              <p>
-                {formatNumber(retention.activeCustomersPeriod)} ativos no período ·{" "}
-                {formatNumber(retention.newCustomersPeriod)} novos ·{" "}
-                {formatNumber(retention.returningCustomersPeriod)} recorrentes (
-                {formatPercent(retornoClientes)})
-              </p>
-            </div>
-          </div>
-          <RankingTable
-            rows={data.customers}
-            columns={[
-              { key: "code", label: "Código" },
-              { key: "name", label: "Cliente" },
-              { key: "purchaseCount", label: "Compras", type: "number" },
-              { key: "value", label: "Valor", type: "money" },
-            ]}
-          />
-        </article>
-
-        <article className="panel">
-          <div className="panelHead">
-            <div>
-              <h2>Pagamentos</h2>
-              <p>Mix por forma de pagamento</p>
-            </div>
-            <WalletCards size={18} />
-          </div>
-          <RankingTable
-            rows={data.paymentMethods}
-            columns={[
-              { key: "code", label: "Forma" },
-              { key: "installments", label: "Parc.", type: "number" },
-              { key: "value", label: "Valor", type: "money" },
-            ]}
-          />
-        </article>
-      </section>
     </main>
   );
 }

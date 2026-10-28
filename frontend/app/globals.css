@@ -377,6 +377,63 @@ h1 {
   color: var(--ink);
 }
 
+/* Capitulo: divisor narrativo entre blocos da pagina. Resolve o problema de 9 secoes com
+   o mesmo peso visual empilhadas sem ordem de leitura. */
+.chapter {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 36px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.chapterNum {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.chapter h2 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.chapter p {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* O unico capitulo que pede decisao, nao so leitura. */
+.chapter.alerta .chapterNum {
+  background: var(--status-serious);
+}
+
+/* Painel de apoio: mesma informacao, menos peso. Sem sombra e com titulo menor, para nao
+   competir com o conteudo principal do capitulo. */
+.panel.soft {
+  box-shadow: none;
+}
+
+.panel.soft .panelHead {
+  min-height: 0;
+  margin-bottom: 12px;
+}
+
+.panel.soft .panelHead h2 {
+  font-size: 14px;
+}
+
 /* Faixa de leitura do periodo */
 .insights {
   display: grid;
